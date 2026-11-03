@@ -1,0 +1,44 @@
+name: Checks
+on: [push, pull_request]
+jobs:
+  offline-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Prepare test dependencies
+        run: bash ./gradlew :domain:testClasses :application:testClasses :engine:testClasses --console=plain
+      - name: Run engine tests with no external network
+        # A separate network namespace has loopback only, including for test JVMs.
+        run: sudo --preserve-env=JAVA_HOME,ANDROID_HOME,ANDROID_SDK_ROOT,PATH env GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}" unshare --net bash -c 'ip link set lo up; bash ./gradlew :domain:test :application:test :engine:check --offline --no-daemon --console=plain'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: offline-engine-tests
+          path: engine/build/reports/tests/
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests and applications
+        run: ./gradlew.bat :domain:test :application:test :engine:check :desktop:test :android:assembleDebug :desktop:createDistributable --console=plain
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checks-and-apps
+          path: |
+            domain/build/reports/tests/
+            application/build/reports/tests/
+            engine/build/reports/tests/
+            desktop/build/reports/
+            android/build/outputs/apk/debug/
+            desktop/build/compose/binaries/main/app/

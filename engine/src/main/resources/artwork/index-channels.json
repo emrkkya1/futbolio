@@ -1,0 +1,221 @@
+﻿{
+    "channels":  [
+                     {
+                         "file":  "channels/bein-sport-1.png",
+                         "aliases":  [
+                                         "beIN 1",
+                                         "beIN Sports 1",
+                                         "beIN Sport 1"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/bein-sport-1.png",
+                         "sha256":  "e6402340e453da3992c35e3ca1c7600ee9f3d96d690d657af0e7c9600f884322"
+                     },
+                     {
+                         "file":  "channels/bein-sport-2.png",
+                         "aliases":  [
+                                         "beIN 2",
+                                         "beIN Sports 2",
+                                         "beIN Sport 2"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/bein-sport-2.png",
+                         "sha256":  "c9f6182b3184c1a8d8bcfc5e7589a67ae02ea0faf4c8b84c180f3cb45862adad"
+                     },
+                     {
+                         "file":  "channels/bein-sport-3.png",
+                         "aliases":  [
+                                         "beIN 3",
+                                         "beIN Sports 3",
+                                         "beIN Sport 3"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/bein-sport-3.png",
+                         "sha256":  "2eb0505552d47a4218f1b3d58cd2b94f7ebed1d5b3b332dbc094d6838cb5fc29"
+                     },
+                     {
+                         "file":  "channels/bein-sport-4.png",
+                         "aliases":  [
+                                         "beIN 4",
+                                         "beIN Sports 4",
+                                         "beIN Sport 4"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/bein-sport-4.png",
+                         "sha256":  "39893c97ce51e3753c9e7fb6e9fcf2f157e2af7d33a4d512e06f43c2c1736b36"
+                     },
+                     {
+                         "file":  "channels/bein-sport-5.png",
+                         "aliases":  [
+                                         "beIN 5",
+                                         "beIN Sports 5",
+                                         "beIN Sport 5"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/bein-sport-5.png",
+                         "sha256":  "408a525b8f1906e8f42cc621a61315196efb78b4ad132c6a6014f890fda72855"
+                     },
+                     {
+                         "file":  "channels/bein-sport-1-max.png",
+                         "aliases":  [
+                                         "beIN Max 1",
+                                         "beIN Sports Max 1",
+                                         "beIN Sport Max 1"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/bein-sport-1-max.png",
+                         "sha256":  "31223d88e4ba4048933d7817e02f8f53fa6fe3afc3239ea4489e40c8c81b0fc3"
+                     },
+                     {
+                         "file":  "channels/bein-sport-2-max.png",
+                         "aliases":  [
+                                         "beIN Max 2",
+                                         "beIN Sports Max 2",
+                                         "beIN Sport Max 2"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/bein-sport-2-max.png",
+                         "sha256":  "8f3e3c3da0c95c002d0b6a2b6937db682b51dddc4f012be33c7784a4e58511b0"
+                     },
+                     {
+                         "file":  "channels/s-sport.png",
+                         "aliases":  [
+                                         "S Sport",
+                                         "S Sport 1"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/s-sport.png",
+                         "sha256":  "c93705bf143b8fff6514e036ff375f51383528b917f24043d1f3f46f1359c5f9"
+                     },
+                     {
+                         "file":  "channels/s-sport-2.png",
+                         "aliases":  [
+                                         "S Sport 2"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/s-sport-2.png",
+                         "sha256":  "2efa04b998c7e84f0b5e353a4831fb7c74f132de0a0a6a0a5bc0dd19f501b334"
+                     },
+                     {
+                         "file":  "channels/tivibu-spor-1.png",
+                         "aliases":  [
+                                         "Tivibu Spor",
+                                         "Tivibu Spor 1"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/tivibu-spor-1.png",
+                         "sha256":  "f9f23d2f8832eabe11100e084d62c92c31f869e80eff9c9d255cc5bfc04fb8ac"
+                     },
+                     {
+                         "file":  "channels/tivibu-spor-2.png",
+                         "aliases":  [
+                                         "Tivibu Spor 2"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/tivibu-spor-2.png",
+                         "sha256":  "646b08a2a37815f59273fbe7ce37e827c59ab78d8fb83934e24f4f4bc79cc8bf"
+                     },
+                     {
+                         "file":  "channels/tivibu-spor-3.png",
+                         "aliases":  [
+                                         "Tivibu Spor 3"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/tivibu-spor-3.png",
+                         "sha256":  "cc3a33247e1cc277754d6657d1d1fb0d3ccbb5731864ce576eb7a138af4bebf9"
+                     },
+                     {
+                         "file":  "channels/tivibu-spor-4.png",
+                         "aliases":  [
+                                         "Tivibu Spor 4"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/tivibu-spor-4.png",
+                         "sha256":  "d93c1eaac4b4f39748d227b60592b6eace7568b50f06f6b4318fc31a30dd3229"
+                     },
+                     {
+                         "file":  "channels/spor-smart.png",
+                         "aliases":  [
+                                         "Spor Smart",
+                                         "Spor Smart 1",
+                                         "Smart Spor",
+                                         "Smart Spor 1"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/spor-smart.png",
+                         "sha256":  "d98cd0552ba673534038e6ab462e1e052d92b5722c6ff92a4e7ba8f99484e2f5"
+                     },
+                     {
+                         "file":  "channels/spor-smart-2.png",
+                         "aliases":  [
+                                         "Spor Smart 2",
+                                         "Smart Spor 2"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/spor-smart-2.png",
+                         "sha256":  "b49a5cad980a2936af2d3651e6d6606211bcf210b0a4e2ae9aee7052bc96d20d"
+                     },
+                     {
+                         "file":  "channels/nba-tv.png",
+                         "aliases":  [
+                                         "NBA TV"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/nba-tv.png",
+                         "sha256":  "a34851e5654dbc78c8c0a9dbada3e91a11de9fd475750b6f2a9ec3d34b124da7"
+                     },
+                     {
+                         "file":  "channels/trt-1.png",
+                         "aliases":  [
+                                         "TRT 1"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/trt-1.png",
+                         "sha256":  "0ce7854ec6e9da7041ab0e7c3721334d8141b08d8950696e3fd9d3c51738b325"
+                     },
+                     {
+                         "file":  "channels/trt-2.png",
+                         "aliases":  [
+                                         "TRT 2"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/trt-2.png",
+                         "sha256":  "0d00bf2be9065f93e4d3536fa13a6b836bf5d8bc1e423c7ebb6d82a0111c6bcb"
+                     },
+                     {
+                         "file":  "channels/trt-spor.png",
+                         "aliases":  [
+                                         "TRT Spor"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/trt-spor.png",
+                         "sha256":  "b05d699188b789824549cb0a5246d07f3c1990afc19f6ec256255bd17987c597"
+                     },
+                     {
+                         "file":  "channels/trt-yildiz.png",
+                         "aliases":  [
+                                         "TRT Yildiz",
+                                         "TRT Spor Yildiz"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/trt-yildiz.png",
+                         "sha256":  "a760c40c7f30d02d789fcf3fe964d90f8e42afa136e85359d4d29f9bf9267ddd"
+                     },
+                     {
+                         "file":  "channels/a-spor.png",
+                         "aliases":  [
+                                         "A Spor"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/a-spor.png",
+                         "sha256":  "159575c7c4eef960446b97a1833b6b36ef085b2aea27f22e6e9d747e36732c59"
+                     },
+                     {
+                         "file":  "channels/tv8bucuk.png",
+                         "aliases":  [
+                                         "TV 8.5",
+                                         "TV8.5",
+                                         "TV 8 Bucuk",
+                                         "TV8 Bucuk"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/tv8bucuk.png",
+                         "sha256":  "5d068123b9be8b22d3fc1dc9f6e0386fd7b04d4416399bbee47328021709771f"
+                     },
+                     {
+                         "file":  "channels/eurosport-1.png",
+                         "aliases":  [
+                                         "Eurosport",
+                                         "Eurosport 1"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/eurosport-1.png",
+                         "sha256":  "b4c1bbbc6581a0b84acff34f2cd5bb0aed27b13fd1190105d1c4127f69fd64df"
+                     },
+                     {
+                         "file":  "channels/eurosport-2.png",
+                         "aliases":  [
+                                         "Eurosport 2"
+                                     ],
+                         "source":  "https://www.papazsports1032.pro/lib/img/channels/eurosport-2.png",
+                         "sha256":  "70bf17c8ac881224af3170a36a2779988c409d8cefaa19c709f894d08a2aeb8d"
+                     }
+                 ]
+}

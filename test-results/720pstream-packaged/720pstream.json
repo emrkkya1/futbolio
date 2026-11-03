@@ -1,0 +1,66 @@
+{
+    "providerId": "720pstream",
+    "providerName": "720pstream",
+    "checkedAt": 1793575538809,
+    "phase": "complete",
+    "catalogCount": 98,
+    "activeDomain": "720pstream.cx",
+    "warning": "",
+    "listings": [
+        {
+            "id": "fut:probe:76a0efce10b2d85967d4942d",
+            "title": "Nashville SC vs Red Bull New York",
+            "choices": [
+                {
+                    "id": "b855cd0e449e9ef710aa01c2",
+                    "title": "Nashville SC vs Red Bull New York",
+                    "stage": "segments-fetched",
+                    "segments": [
+                        {
+                            "bytes": 1459264,
+                            "format": "AES-128 encrypted media",
+                            "sha256": "01f6202d7821bfc138719e0df86a5a2581c275c7d40ec2694431c0cfc1579f0d"
+                        },
+                        {
+                            "bytes": 1350032,
+                            "format": "AES-128 encrypted media",
+                            "sha256": "76f7d3b6d70141ab566775e988d99ec0e7cd82f5dbc07336958813b1e0983327"
+                        }
+                    ],
+                    "error": "",
+                    "playback": "not-confirmed",
+                    "playbackCheckedAt": 0
+                }
+            ],
+            "error": ""
+        },
+        {
+            "id": "fut:probe:9adf8595f2feb4e7e0eb599d",
+            "title": "Atlanta United FC vs Toronto FC",
+            "choices": [
+                {
+                    "id": "102bc9c489625353e2cde410",
+                    "title": "Atlanta United FC vs Toronto FC",
+                    "stage": "segments-fetched",
+                    "segments": [
+                        {
+                            "bytes": 1522992,
+                            "format": "AES-128 encrypted media",
+                            "sha256": "2cc51a545455995c31c8fe6b5348c17206b5d2b5d951e7ef5404543162a3a333"
+                        },
+                        {
+                            "bytes": 1364512,
+                            "format": "AES-128 encrypted media",
+                            "sha256": "c8c2d4b3a5bf37deb8ed87b62141c6327b346f038664bd5c35b6bf06d2bee60d"
+                        }
+                    ],
+                    "error": "",
+                    "playback": "not-confirmed",
+                    "playbackCheckedAt": 0
+                }
+            ],
+            "error": ""
+        }
+    ],
+    "error": ""
+}

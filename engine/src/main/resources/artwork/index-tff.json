@@ -1,0 +1,252 @@
+{
+    "teams":  [
+                  {
+                      "id":  "tff-52",
+                      "name":  "Antalyaspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000051_120x120.png",
+                      "aliases":  [
+                                      "Antalyaspor",
+                                      "Antalyaspor A.Ş."
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=52",
+                      "file":  "teams/tff-52.png"
+                  },
+                  {
+                      "id":  "tff-3601",
+                      "name":  "Bursaspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000159_120x120.png",
+                      "aliases":  [
+                                      "Bursaspor"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=3601",
+                      "file":  "teams/tff-3601.png"
+                  },
+                  {
+                      "id":  "tff-3602",
+                      "name":  "Sarıyer",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000160_120x120.png",
+                      "aliases":  [
+                                      "Sarıyer",
+                                      "Sarıyerspor",
+                                      "Sarıyer SK",
+                                      "SMS Grup Sarıyer"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=3602",
+                      "file":  "teams/tff-3602.png"
+                  },
+                  {
+                      "id":  "tff-9387",
+                      "name":  "Iğdır FK",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/017545_120x120.png",
+                      "aliases":  [
+                                      "Iğdır FK",
+                                      "Iğdır",
+                                      "Iğdır Futbol Kulübü",
+                                      "Alagöz Holding Iğdır Futbol Kulübü"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=9387",
+                      "file":  "teams/tff-9387.png"
+                  },
+                  {
+                      "id":  "tff-6",
+                      "name":  "Ankara Keçiörengücü",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000004_120x120.png",
+                      "aliases":  [
+                                      "Ankara Keçiörengücü",
+                                      "Keçiörengücü",
+                                      "Keçtaş Ankara Keçiörengücü"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=6",
+                      "file":  "teams/tff-6.png"
+                  },
+                  {
+                      "id":  "tff-2861",
+                      "name":  "Manisa FK",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/014918_120x120.png",
+                      "aliases":  [
+                                      "Manisa FK",
+                                      "Manisa Futbol Kulübü"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=2861",
+                      "file":  "teams/tff-2861.png"
+                  },
+                  {
+                      "id":  "tff-2020",
+                      "name":  "Vanspor FK",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/013919_120x120.png",
+                      "aliases":  [
+                                      "Vanspor FK",
+                                      "Vanspor",
+                                      "Van Spor FK",
+                                      "Van Spor Futbol Kulübü",
+                                      "Artı Değer Van Spor Futbol Kulübü"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=2020",
+                      "file":  "teams/tff-2020.png"
+                  },
+                  {
+                      "id":  "tff-74",
+                      "name":  "Sivasspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000073_120x120.png",
+                      "aliases":  [
+                                      "Sivasspor",
+                                      "Ekenler Beton Sivasspor"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=74",
+                      "file":  "teams/tff-74.png"
+                  },
+                  {
+                      "id":  "tff-82",
+                      "name":  "Muğlaspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000081_120x120.png",
+                      "aliases":  [
+                                      "Muğlaspor",
+                                      "Muğlaspor Kulübü"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=82",
+                      "file":  "teams/tff-82.png"
+                  },
+                  {
+                      "id":  "tff-964",
+                      "name":  "Esenler Erokspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/012727_120x120.png",
+                      "aliases":  [
+                                      "Esenler Erokspor",
+                                      "Erokspor",
+                                      "Turka Esenler Erokspor"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=964",
+                      "file":  "teams/tff-964.png"
+                  },
+                  {
+                      "id":  "tff-3623",
+                      "name":  "Pendikspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000181_120x120.png",
+                      "aliases":  [
+                                      "Pendikspor",
+                                      "Pendikspor Futbol A.Ş.",
+                                      "Orfa Yapı Pendikspor Futbol A.Ş."
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=3623",
+                      "file":  "teams/tff-3623.png"
+                  },
+                  {
+                      "id":  "tff-3617",
+                      "name":  "İstanbulspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000175_120x120.png",
+                      "aliases":  [
+                                      "İstanbulspor",
+                                      "İstanbulspor A.Ş."
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=3617",
+                      "file":  "teams/tff-3617.png"
+                  },
+                  {
+                      "id":  "tff-130",
+                      "name":  "Bandırmaspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000132_120x120.png",
+                      "aliases":  [
+                                      "Bandırmaspor",
+                                      "Bandırma Spor",
+                                      "Bandırma"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=130",
+                      "file":  "teams/tff-130.png"
+                  },
+                  {
+                      "id":  "tff-3611",
+                      "name":  "Fatih Karagümrük",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000169_120x120.png",
+                      "aliases":  [
+                                      "Fatih Karagümrük",
+                                      "Karagümrük",
+                                      "Fatih Karagümrük A.Ş.",
+                                      "Mısırlıcomtr Fatih Karagümrük A.Ş."
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=3611",
+                      "file":  "teams/tff-3611.png"
+                  },
+                  {
+                      "id":  "tff-3661",
+                      "name":  "Ümraniyespor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000232_120x120.png",
+                      "aliases":  [
+                                      "Ümraniyespor",
+                                      "Eminevim Ümraniyespor"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=3661",
+                      "file":  "teams/tff-3661.png"
+                  },
+                  {
+                      "id":  "tff-72",
+                      "name":  "Kayserispor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000071_120x120.png",
+                      "aliases":  [
+                                      "Kayserispor",
+                                      "Metro Holding Kayserispor"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=72",
+                      "file":  "teams/tff-72.png"
+                  },
+                  {
+                      "id":  "tff-3593",
+                      "name":  "Boluspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000151_120x120.png",
+                      "aliases":  [
+                                      "Boluspor"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=3593",
+                      "file":  "teams/tff-3593.png"
+                  },
+                  {
+                      "id":  "tff-4824",
+                      "name":  "Bodrum FK",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/011323_120x120.png",
+                      "aliases":  [
+                                      "Bodrum FK",
+                                      "Bodrumspor",
+                                      "BB Bodrumspor",
+                                      "B.B. Bodrumspor"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=4824",
+                      "file":  "teams/tff-4824.png"
+                  },
+                  {
+                      "id":  "tff-8758",
+                      "name":  "Mardin 1969 Spor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/017284_120x120.png",
+                      "aliases":  [
+                                      "Mardin 1969 Spor",
+                                      "Mardin 1969",
+                                      "Mardinspor"
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=8758",
+                      "file":  "teams/tff-8758.png"
+                  },
+                  {
+                      "id":  "tff-34",
+                      "name":  "Batman Petrolspor",
+                      "source":  "https://fys.tff.org/TFFUploadFolder/KulupLogolari/000033_120x120.png",
+                      "aliases":  [
+                                      "Batman Petrolspor",
+                                      "Batman Petrol Spor",
+                                      "Batman Petrol Spor A.Ş."
+                                  ],
+                      "sourcePage":  "https://www.tff.org/Default.aspx?pageID=28\u0026kulupID=34",
+                      "file":  "teams/tff-34.png"
+                  }
+              ],
+    "competitions":  [
+                         {
+                             "source":  "https://www.tff.org/Resources/TFF/Images/0000000015/TFF/TFF-Logolar/2023-trendyol/trendyol-1-lig.png",
+                             "name":  "Trendyol 1. Lig",
+                             "id":  "tur.2",
+                             "lightBackground": true,
+                             "sourcePage":  "https://www.tff.org/default.aspx?pageID=1314",
+                             "file":  "competitions/tur.2.png"
+                         }
+                     ],
+    "source":  "https://www.tff.org/default.aspx?pageID=142",
+    "version":  1,
+    "importedAt":  "2026-11-02"
+}
