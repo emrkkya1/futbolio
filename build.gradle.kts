@@ -11,7 +11,7 @@ plugins {
     alias(libs.plugins.compose) apply false
     alias(libs.plugins.android.application) apply false
 }
-allprojects { group = "app.futbolio"; version = "0.3.0" }
+allprojects { group = "app.futbolio"; version = providers.gradleProperty("futbolioVersion").get() }
 subprojects { dependencyLocking { lockAllConfigurations() } }
 
 val verifyModuleDependencies by tasks.registering {

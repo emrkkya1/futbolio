@@ -74,6 +74,18 @@ The foreground service can continue after the activity closes, but Android may s
 
 ## Build and test
 
+### Application versioning
+
+`futbolioVersion` in `gradle.properties` is the single application version for the
+engine, Stremio manifest, desktop package and Android APK. Increment
+`futbolioAndroidVersionCode` for each published Android update. Changes are recorded
+in [CHANGELOG.md](CHANGELOG.md); releases use `vX.Y.Z` tags on the reviewed commit
+after merging to `main`. Build every platform artifact from that same commit and
+preserve the Android signing key so updates retain settings. Debug-signed APKs are
+development builds, not production releases. Never commit signing keys or passwords.
+
+### Build commands
+
 Requires **JDK 21**, **Android SDK platform 35 and build tools** for Android tasks, and network access for the first dependency download. Set `JAVA_HOME` and `ANDROID_HOME` as needed. On Windows, use `gradlew.bat` instead of `./gradlew`.
 
 ```sh

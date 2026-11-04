@@ -21,7 +21,7 @@ compose.desktop { application {
         providers.gradleProperty("futbolio.packageOutput").orNull?.let { outputBaseDir.set(project.file(it)) }
         targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Rpm)
         packageName = "Futbolio"
-        packageVersion = "0.3.0"
+        packageVersion = project.version.toString()
         modules("java.net.http", "java.desktop", "jdk.unsupported")
         windows {
             iconFile.set(project.file("icons/futbolio.ico"))

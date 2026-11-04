@@ -6,8 +6,8 @@ android {
         applicationId = "app.futbolio.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = providers.gradleProperty("futbolioAndroidVersionCode").get().toInt()
+        versionName = project.version.toString()
         testInstrumentationRunner = "app.futbolio.android.SmokeInstrumentation"
     }
     buildFeatures { compose = true }
