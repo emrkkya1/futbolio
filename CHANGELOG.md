@@ -4,6 +4,21 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
+## 0.3.3
+
+### Added
+- Layered Android adaptive launcher icon with a dark background and a separate
+  lime diamond foreground whose F remains a transparent cutout.
+- White-only notification icon with a transparent background and F cutout.
+- Enrich matched listings from ESPN's all-soccer scoreboard before returning
+  catalogs: live scores and match minutes in descriptions and square posters.
+- Prefix halftime titles with `HT |` and remove ESPN-confirmed ended matches.
+- Share scoreboard requests with a short cache and timeout; unavailable,
+  ambiguous, and unmatched data leave listings unchanged. Score updates retain
+  listing IDs. Score/status changes invalidate poster URLs; minute ticks do not
+  trigger whole-screen image reloads. Larger scores and minutes automatically fit
+  their thumbnail areas.
+
 ## 0.3.2
 
 ### Added

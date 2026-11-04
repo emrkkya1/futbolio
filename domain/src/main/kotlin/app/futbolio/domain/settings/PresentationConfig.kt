@@ -6,7 +6,7 @@ data class PresentationConfig(
     val displayTimeZone: String = "Europe/Istanbul",
     val hideFinished: Boolean = true,
     val showHalftime: Boolean = true,
-    /** Legacy persisted preference only; no longer enables score enrichment. */
+    /** Legacy persisted preference only; scoreboard enrichment is automatic when available. */
     val scoresEnabled: Boolean = false,
     val teamAliases: Map<String, String> = emptyMap(),
     val leagueAliases: Map<String, String> = emptyMap(),

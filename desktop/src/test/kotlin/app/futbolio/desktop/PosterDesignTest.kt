@@ -8,6 +8,24 @@ import javax.imageio.ImageIO
 import kotlin.test.*
 
 class PosterDesignTest {
+    @Test fun liveScoreReplacesVersusAndMinuteAppearsOnlyAtBottomRight() {
+        val renderer = DesktopPosters()
+        fun image(score: String = "", minute: String = "") = ImageIO.read(renderer.renderMatch(
+            model().copy(score = score, minute = minute, live = true, statusVerified = true)).inputStream())
+        val plain = image()
+        val score = image("2 - 1")
+        val minute = image("2 - 1", "47'")
+        fun differences(a: java.awt.image.BufferedImage, b: java.awt.image.BufferedImage, x: Int, y: Int, w: Int, h: Int) =
+            (x until x + w).sumOf { column -> (y until y + h).count { row -> a.getRGB(column, row) != b.getRGB(column, row) } }
+        assertTrue(differences(plain, score, 265, 280, 110, 48) > 100, "Center score must replace VS")
+        assertTrue(differences(score, minute, 498, 546, 112, 48) > 100, "Minute must be visible at bottom right")
+        assertEquals(0, differences(score, minute, 0, 0, 640, 500), "Minute must not alter team names or crests")
+        val directory = Path.of(System.getProperty("java.io.tmpdir"), "opencode")
+        Files.createDirectories(directory)
+        Files.write(directory.resolve("futbolio-live-score-poster.jpg"), renderer.renderMatch(
+            model().copy(score = "2 - 1", minute = "47'", live = true, statusVerified = true)))
+    }
+
     @Test fun sportsChannelPostersRenderBundledLogoAndRetainUnknownChannelFallback() {
         val renderer = DesktopPosters()
         val channel = PosterModel("beIN Sports 1", "Sports Channels", channelLogo = asset("channels/bein-sport-1.png"))

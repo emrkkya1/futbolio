@@ -15,8 +15,12 @@ internal class EspnScoreFeed(private val net: Upstream) : ScoreFeed {
         return parse(net.text(url).text, league, observedAt)
     }
 
+    override suspend fun scoreboard(observedAt: Long): List<ScoreFixture> =
+        parse(net.text("https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard?limit=150").text,
+            League("all", "Football", emptyList()), observedAt)
+
     companion object {
-        fun parse(text: String, league: League, now: Long): List<ScoreFixture> = codec.parseToJsonElement(text).obj().a("events").take(100).mapNotNull { value ->
+        fun parse(text: String, league: League, now: Long): List<ScoreFixture> = codec.parseToJsonElement(text).obj().a("events").take(150).mapNotNull { value ->
             runCatching {
                 val event = value.obj()
                 val competition = event.a("competitions").first().obj()
@@ -42,8 +46,14 @@ internal class EspnScoreFeed(private val net: Upstream) : ScoreFeed {
                 }
                 ScoreFixture(event.s("id"), league, team(home), team(away),
                     Instant.parse(event.s("date").replace(Regex("(T\\d{2}:\\d{2})Z$"), "$1:00Z")).toEpochMilli(),
-                    state, home.s("score"), away.s("score"), type.s("shortDetail"), now)
+                    state, home.s("score"), away.s("score"), Text.plain(type.s("shortDetail")), now,
+                    minute(status.s("displayClock").ifBlank { type.s("shortDetail") }))
             }.getOrNull()
+        }
+
+        private fun minute(value: String): String {
+            val clean = value.trim().replace(Regex("['’′]"), "")
+            return if (clean.matches(Regex("\\d{1,3}(?:\\+\\d{1,2})?"))) "$clean'" else ""
         }
     }
 }

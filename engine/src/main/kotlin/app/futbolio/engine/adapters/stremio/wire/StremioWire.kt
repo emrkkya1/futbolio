@@ -69,9 +69,14 @@ internal class StremioWire(private val host: HostConfig) {
         val kickoff = DisplayTime.kickoff(row.starts, preferences)
         val state = row.state(now).label
         val home = row.home; val away = row.away
-        val title = if (!row.channel && home != null && away != null) "${home.name} vs ${away.name}" else row.title
+        val matchTitle = if (!row.channel && home != null && away != null) "${home.name} vs ${away.name}" else row.title
+        val title = if (!row.channel && row.state(now) == MatchState.HALFTIME) "HT | $matchTitle" else matchTitle
+        val score = row.fixture?.scoreText(now).orEmpty()
+        val minute = row.fixture?.clockText(now).orEmpty()
         put("id", row.id); put("type", "tv"); put("name", title); put("posterShape", "square")
-        put("poster", "${host.base}/poster/${Web.enc(row.id)}.jpg?v=6")
+        // Minute ticks update descriptions but must not invalidate a whole screen of posters.
+        val scoreVersion = if (score.isNotBlank() || minute.isNotBlank()) "&match=${Web.enc("$score|${row.state(now).name}")}" else ""
+        put("poster", "${host.base}/poster/${Web.enc(row.id)}.jpg?v=7$scoreVersion")
         val verified = row.fixture?.let { it.fresh(now) || it.state in listOf(MatchState.FINISHED, MatchState.CANCELLED) } == true
         val date = if (row.starts > 0) Instant.ofEpochMilli(row.starts).atZone(ZoneId.of(preferences.displayTimeZone)) else null
         val fullKickoff = date?.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy · HH:mm", Locale.UK))
@@ -79,7 +84,7 @@ internal class StremioWire(private val host: HostConfig) {
             ?: "To be confirmed"
         val providers = "${row.sources.size} ${if (row.sources.size == 1) "provider" else "providers"} · ${row.sources.joinToString(", ")}"
         put("description", if (row.channel) "$title\n24/7 sports channel\nListed by $providers\nSelect an available stream to watch."
-            else "${row.league.name}\nKickoff: $fullKickoff\nStatus: $state${if (verified) " · verified fixture data" else " · kickoff-based estimate"}\nListed by $providers${if (row.needsFixtureLookup) "\nProvider schedules differ; kickoff verification is pending." else ""}\nSelect an available stream to watch.")
+            else "${row.league.name}\nKickoff: $fullKickoff\nStatus: $state${if (verified) " · verified fixture data" else " · kickoff-based estimate"}${if (score.isNotBlank()) "\nScore: ${home?.name.orEmpty()} $score ${away?.name.orEmpty()}" else ""}${if (minute.isNotBlank()) "\nMatch time: $minute" else ""}\nListed by $providers${if (row.needsFixtureLookup) "\nProvider schedules differ; kickoff verification is pending." else ""}\nSelect an available stream to watch.")
         put("genres", JsonArray(listOf(JsonPrimitive(row.league.name))))
         put("links", metaLinks(row))
         put("releaseInfo", if (row.channel) "24/7 channel" else "$state · $kickoff")

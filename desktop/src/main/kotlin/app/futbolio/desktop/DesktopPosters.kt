@@ -91,7 +91,12 @@ class DesktopPosters : PosterRenderer {
                     fitted(name, x, 426, 236, 28, center = true)
                 }
                 team(model.home, model.homeLogo, 178); team(model.away, model.awayLogo, 462)
-                text("VS", 320, 313, 17, muted, center = true)
+                val scoreSize = (38 downTo 22).firstOrNull { size ->
+                    g.font = Font(Font.SANS_SERIF, Font.BOLD, size)
+                    g.fontMetrics.stringWidth(model.score) <= 116
+                } ?: 22
+                text(model.score.ifBlank { "VS" }, 320, 313, if (model.score.isBlank()) 17 else scoreSize,
+                    if (model.score.isBlank()) muted else white, bold = model.score.isNotBlank(), center = true)
             } else {
                 val hasLogo = logo(model.channelLogo, 154, 228, 332, 120)
                 fitted(model.title, 320, if (hasLogo) 424 else 292, 520, if (hasLogo) 32 else 44, center = true)
@@ -107,6 +112,13 @@ class DesktopPosters : PosterRenderer {
                 g.drawLine(298, 518, 342, 518); g.drawLine(320, 555, 320, 567); g.drawLine(307, 568, 333, 568)
             }
             fitted(model.league.uppercase(Locale.ROOT), 320, 603, 390, 14, center = true, color = muted)
+            if (model.minute.isNotBlank()) {
+                val minuteSize = (32 downTo 20).firstOrNull { size ->
+                    g.font = Font(Font.SANS_SERIF, Font.BOLD, size)
+                    g.fontMetrics.stringWidth(model.minute) <= 112
+                } ?: 20
+                text(model.minute, 554, 578, minuteSize, mint, bold = true, center = true)
+            }
             brand(g)
         } finally { g.dispose() }
         val bytes = ByteArrayOutputStream()

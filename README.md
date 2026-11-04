@@ -37,6 +37,7 @@ Futbolio connects supported third-party providers to Stremio. It organizes match
 
 - Presents Live Now, Starting Soon, Turkish Football, Sports Channels, and All Matches catalogs, plus search.
 - Combines matching provider listings into one match with multiple sources; includes competition filters, kickoff times, and locally generated posters.
+- Adds ESPN scores and match minutes to matched descriptions/posters, prefixes halftime titles with `HT |`, and hides confirmed ended matches. Unmatched listings are unchanged; see [score enrichment](docs/SCORE-ENRICHMENT.md).
 - Supports PPV, PapazSports, Taraftarium24, FutbolVivo, and 720pstream through configurable adapters.
 - Relays HLS playlists, segments, and keys while preserving required headers and supported provider sessions. Media is forwarded incrementally, without saving video files.
 - Provides provider diagnostics, configuration import/export, and explicit external-browser options when a playable link cannot be extracted.

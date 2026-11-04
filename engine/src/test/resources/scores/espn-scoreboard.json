@@ -1,0 +1,39 @@
+{
+  "events": [
+    {
+      "id": "live", "date": "2026-11-05T19:00Z",
+      "status": {"displayClock": "47'", "period": 2, "type": {"name": "STATUS_IN_PROGRESS", "state": "in", "completed": false, "shortDetail": "47'"}},
+      "competitions": [{"competitors": [
+        {"homeAway": "home", "score": "2", "team": {"id": "1", "displayName": "Arsenal", "shortDisplayName": "Arsenal"}},
+        {"homeAway": "away", "score": "1", "team": {"id": "2", "displayName": "Chelsea", "shortDisplayName": "Chelsea"}}
+      ]}]
+    },
+    {
+      "id": "halftime", "date": "2026-11-05T19:00Z",
+      "status": {"displayClock": "45'+2'", "period": 1, "type": {"name": "STATUS_HALFTIME", "state": "in", "completed": false, "shortDetail": "HT"}},
+      "competitions": [{"competitors": [
+        {"homeAway": "home", "score": "0", "team": {"id": "3", "displayName": "Manchester United", "shortDisplayName": "Man Utd"}},
+        {"homeAway": "away", "score": "0", "team": {"id": "4", "displayName": "Liverpool"}}
+      ]}]
+    },
+    {
+      "id": "ended", "date": "2026-11-05T19:00Z",
+      "status": {"displayClock": "90'+4'", "type": {"name": "STATUS_FULL_TIME", "state": "post", "completed": true, "shortDetail": "FT"}},
+      "competitions": [{"competitors": [
+        {"homeAway": "home", "score": "3", "team": {"id": "5", "displayName": "PSV Eindhoven"}},
+        {"homeAway": "away", "score": "2", "team": {"id": "6", "displayName": "Club Brugge"}}
+      ]}]
+    },
+    {
+      "id": "scheduled", "date": "2026-11-05T21:00Z",
+      "competitions": [{
+        "status": {"displayClock": "0:00", "type": {"name": "STATUS_SCHEDULED", "state": "pre", "completed": false, "shortDetail": "21:00"}},
+        "competitors": [
+          {"homeAway": "home", "score": "0", "team": {"id": "7", "displayName": "Galatasaray"}},
+          {"homeAway": "away", "score": "0", "team": {"id": "8", "displayName": "Fenerbahce"}}
+        ]
+      }]
+    },
+    {"id": "malformed", "date": "2026-11-05T19:00Z", "competitions": []}
+  ]
+}

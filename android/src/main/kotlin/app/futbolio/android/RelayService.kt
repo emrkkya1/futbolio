@@ -31,7 +31,7 @@ class RelayService : Service() {
             getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("relay", "Futbolio relay", NotificationManager.IMPORTANCE_LOW))
             val open = PendingIntent.getActivity(this, 1, Intent(this, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val stop = PendingIntent.getService(this, 2, Intent(this, RelayService::class.java).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            val notification = Notification.Builder(this, "relay").setSmallIcon(R.drawable.ic_futbolio).setContentTitle("Futbolio is running")
+            val notification = Notification.Builder(this, "relay").setSmallIcon(R.drawable.ic_futbolio_notification).setContentTitle("Futbolio is running")
                 .setContentText("Stremio add-on · this device only").setContentIntent(open).setOngoing(true)
                 .addAction(Notification.Action.Builder(null, "Stop", stop).build()).build()
             if (Build.VERSION.SDK_INT >= 29) startForeground(10, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(10, notification)

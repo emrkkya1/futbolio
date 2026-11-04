@@ -35,6 +35,7 @@ data class PosterModel(
     val statusVerified: Boolean = false,
     val competitionLightBackground: Boolean = false,
     val channelLogo: ByteArray? = null,
+    val score: String = "", val minute: String = "",
 )
 fun interface PosterRenderer {
     fun render(title: String, source: String): ByteArray
