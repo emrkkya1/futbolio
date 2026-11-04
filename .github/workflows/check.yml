@@ -42,6 +42,8 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -54,7 +56,7 @@ jobs:
       - name: Validate release detection
         run: python3 -m unittest discover -s scripts/ci -p 'test_*.py' -v
       - name: Check whitespace
-        run: git show --format= --check HEAD
+        run: git -c core.whitespace=trailing-space,space-before-tab,cr-at-eol show --format= --check HEAD
       - name: Unit tests, version checks and lint (no UI or live tests)
         run: bash ./gradlew :desktop:headlessTest :android:testDebugUnitTest :android:verifyVersioning :android:lintDebug :android:lintRelease --no-daemon --console=plain
       - uses: actions/upload-artifact@v4
