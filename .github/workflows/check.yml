@@ -11,7 +11,9 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Prepare test dependencies
-        run: bash ./gradlew :domain:testClasses :application:testClasses :engine:testClasses --console=plain
+        run: |
+          bash ./gradlew prepareOfflineTestDependencies --no-daemon --console=plain
+          bash ./gradlew --stop
       - name: Run engine tests with no external network
         # A separate network namespace has loopback only, including for test JVMs.
         run: sudo --preserve-env=JAVA_HOME,ANDROID_HOME,ANDROID_SDK_ROOT,PATH env GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}" unshare --net bash -c 'ip link set lo up; bash ./gradlew :domain:test :application:test :engine:check --offline --no-daemon --console=plain'
@@ -30,7 +32,7 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Unit tests and applications
-        run: ./gradlew.bat :domain:test :application:test :engine:check :desktop:test :android:assembleDebug :desktop:createDistributable --console=plain
+        run: ./gradlew.bat :domain:test :application:test :engine:check :desktop:test :android:verifyVersioning :android:testDebugUnitTest :android:assembleDebug :desktop:createDistributable --console=plain
       - uses: actions/upload-artifact@v4
         if: always()
         with:

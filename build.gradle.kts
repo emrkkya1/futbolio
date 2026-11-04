@@ -14,6 +14,17 @@ plugins {
 allprojects { group = "app.futbolio"; version = providers.gradleProperty("futbolioVersion").get() }
 subprojects { dependencyLocking { lockAllConfigurations() } }
 
+val prepareOfflineTestDependencies by tasks.registering {
+    group = "verification"
+    description = "Compile and download all core test runtime artifacts before network isolation."
+    dependsOn(":domain:testClasses", ":application:testClasses", ":engine:testClasses")
+    doLast {
+        listOf(":domain", ":application", ":engine").forEach { module ->
+            rootProject.project(module).configurations.getByName("testRuntimeClasspath").resolve()
+        }
+    }
+}
+
 val verifyModuleDependencies by tasks.registering {
     group = "verification"
     description = "Enforce the approved inward-only project dependency graph."

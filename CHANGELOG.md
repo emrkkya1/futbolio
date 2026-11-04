@@ -15,6 +15,9 @@ derived from that version using fixed-width numeric positions.
 - Support 720p's published renewable-player configuration across static data
   layouts; prevent large inline advertising scripts from exhausting parser budgets.
 - Remove website-only choices from Stremio's stream results.
+- Make desktop dependency locking portable across host operating systems while
+  retaining framework/native version pins; stop preparation daemons before
+  network-isolated CI and prefetch complete test runtime artifacts.
 
 ### Added
 - Sanitized, dated real-provider regression states and offline resolution tests.
@@ -31,7 +34,7 @@ derived from that version using fixed-width numeric positions.
 - User confirmed native playback of PapazSports, FutbolVivo and 720pstream on a
   Mi Stick. Occasional 720p freezes remain under investigation; long-session
   renewal and full-match stability are not yet verified.
-- Desktop tests on Linux are blocked by Windows-specific dependency locks.
+- All 18 desktop host/UI tests also passed on Linux.
 
 ## 0.3.0
 
