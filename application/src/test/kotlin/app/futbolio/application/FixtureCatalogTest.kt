@@ -39,7 +39,7 @@ class FixtureCatalogTest {
         }
     }
 
-    @Test fun ordinaryBrowsingHasNoFixtureCallsEvenWithLegacyScoresEnabledAndReusesAggregation() = runTest {
+    @Test fun fixtureOnlyAdaptersDoNotSweepLeaguesDuringBrowsingAndReuseAggregation() = runTest {
         val clock = Clock()
         var calls = 0
         val fixtures = FixtureService(this, ScoreFeed { _, _, _ -> calls++; error("Unexpected scoreboard sweep") }, clock)
@@ -64,6 +64,31 @@ class FixtureCatalogTest {
         assertTrue(entries.entries().isEmpty())
         assertEquals(before, currentTime)
         assertTrue(catalog.status.value.single().loading)
+    }
+
+    @Test fun browsingWaitsForScoreboardButStreamSelectionNeverWaitsForIt() = runTest {
+        val clock = Clock(); var scoreboardCalls = 0
+        val feed = object : ScoreFeed {
+            override suspend fun fixtures(league: League, date: java.time.LocalDate, observedAt: Long) = emptyList<ScoreFixture>()
+            override suspend fun scoreboard(observedAt: Long): List<ScoreFixture> {
+                scoreboardCalls++; delay(100)
+                return listOf(fixture(clock).copy(detail = "47'", minute = "47'"))
+            }
+        }
+        val fixtures = FixtureService(this, feed, clock)
+        val catalog = Catalog(this, net, listOf(source), directory { listOf(row(clock)) }, clock)
+        catalog.refresh().await()
+        val entries = EntryCatalog(catalog, fixtures, PresentationConfig(), backgroundScope, clock, StandardTestDispatcher(testScheduler))
+        val id = entry(clock).id
+        val before = currentTime
+        assertNotNull(entries.selected(id))
+        assertEquals(before, currentTime)
+        assertEquals(0, scoreboardCalls)
+        val enriched = entries.entries().single()
+        assertEquals(100, currentTime - before)
+        assertEquals("3 - 2", enriched.fixture!!.scoreText(clock.wall))
+        assertEquals("47'", entries.posterEntry(id)!!.fixture!!.clockText(clock.wall))
+        assertEquals(1, scoreboardCalls)
     }
 
     @Test fun selectedMatchRequestsAreCoalescedAndScoresAreDiscarded() = runTest {

@@ -22,14 +22,15 @@ class CatalogCurationTest {
         assertFalse(visible(aggregate(row(start = 0)).single()))
     }
 
-    @Test fun leagueAndTournamentExpiryHaveExactBoundaries() {
+    @Test fun estimatedLeagueAndTournamentExpiryHaveExactBoundariesUnlessVerifiedLive() {
         val league = aggregate(row(league = "Premier League", start = now - 2 * hour)).single()
         val cup = aggregate(row(start = now - 3 * hour)).single()
         assertTrue(visible(league, now - 1))
         assertFalse(visible(league))
         assertTrue(visible(cup, now - 1))
         assertFalse(visible(cup))
-        assertFalse(visible(league.copy(fixture = fixture(league.league, league.starts, MatchState.LIVE))))
+        assertTrue(visible(league.copy(fixture = fixture(league.league, league.starts, MatchState.LIVE))),
+            "Fresh scoreboard status takes precedence over estimated expiry")
     }
 
     @Test fun cupMetadataIsExplicitIncludingEnglishCupsAndMlsIsNotACup() {

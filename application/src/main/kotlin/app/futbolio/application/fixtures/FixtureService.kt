@@ -15,7 +15,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
-/** On-demand fixture identity/status only. No scoreboard sweep, scores, or periodic polling. */
+/** Bounded, shared on-demand fixture lookups and a short-lived all-league scoreboard. No polling. */
 class FixtureService(
     private val scope: CoroutineScope,
     private val feed: ScoreFeed,
@@ -43,7 +43,18 @@ class FixtureService(
         obsolete.forEach { it.cancel() }
     }
 
-    @Synchronized fun fixtures() = cache.values.flatMap { it.fixtures }
+    @Synchronized fun fixtures() = cache.filterKeys { it.league != scoreboardLeague }.values.flatMap { it.fixtures }
+
+    private fun scoreboardKey() = Key(scoreboardLeague, Instant.ofEpochMilli(time.wallMillis()).atZone(ZoneOffset.UTC).toLocalDate())
+
+    /** Browsing waits at most the shared 1.5-second request budget; transport errors fail open. */
+    suspend fun scoreboard(): List<ScoreFixture> {
+        try { request(scoreboardKey())?.await() }
+        catch (_: CancellationException) { currentCoroutineContext().ensureActive(); return emptyList() }
+        return scoreboardSnapshot()
+    }
+
+    @Synchronized fun scoreboardSnapshot(): List<ScoreFixture> = cache[scoreboardKey()]?.fixtures.orEmpty()
 
     /** Only call for a selected match or a detected duplicate conflict, never ordinary rows. */
     fun request(entry: CatalogEntry, config: PresentationConfig): List<Deferred<Unit>> {
@@ -64,15 +75,20 @@ class FixtureService(
         val epoch = generation
         val job = scope.async(start = CoroutineStart.LAZY) {
             try {
+                val scoreboard = key.league == scoreboardLeague
                 val result = withTimeout(1500) {
-                    permits.withPermit { feed.fixtures(key.league, key.date, time.wallMillis()) }
-                }.take(100).map { it.copy(homeScore = "", awayScore = "", detail = "") }
+                    permits.withPermit {
+                        if (scoreboard) feed.scoreboard(time.wallMillis()) else feed.fixtures(key.league, key.date, time.wallMillis())
+                    }
+                }.take(if (scoreboard) 150 else 100).map {
+                    if (scoreboard) it else it.copy(homeScore = "", awayScore = "", detail = "", minute = "")
+                }
                 synchronized(this@FixtureService) {
                     if (epoch == generation) {
                         // Preserve confirmed final statuses across later incomplete/failed responses.
                         val finals = cache[key]?.fixtures.orEmpty().filter { it.state in finalStates }
                         val merged = result.filterNot { fresh -> finals.any { it.id == fresh.id } } + finals
-                        cache[key] = Cached(merged, time.monotonicMillis() + 60_000)
+                        cache[key] = Cached(merged, time.monotonicMillis() + if (scoreboard) 30_000 else 60_000)
                         while (cache.size > 48) cache.remove(cache.keys.first())
                         lastError = ""
                         mutableChanges.value++
@@ -92,12 +108,16 @@ class FixtureService(
 
     @Synchronized private fun failure(key: Key, epoch: Long, message: String) {
         if (epoch != generation) return
-        cache[key] = Cached(cache[key]?.fixtures.orEmpty(), time.monotonicMillis() + 300_000)
+        val scoreboard = key.league == scoreboardLeague
+        // Do not continue displaying an old live score/minute after a failed refresh.
+        val retained = cache[key]?.fixtures.orEmpty().filter { !scoreboard || it.state in finalStates }
+        cache[key] = Cached(retained, time.monotonicMillis() + if (scoreboard) 15_000 else 300_000)
         while (cache.size > 48) cache.remove(cache.keys.first())
         lastError = message
     }
 
     private companion object {
+        val scoreboardLeague = League("all", "Football", emptyList())
         val finalStates = setOf(MatchState.FINISHED, MatchState.CANCELLED)
     }
 }

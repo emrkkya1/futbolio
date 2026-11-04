@@ -63,9 +63,17 @@ class EntryCatalog(
     fun presentation() = synchronized(state) { options }
     fun posterEntry(id: String): CatalogEntry? = synchronized(state) { posterEntries[id] }
 
-    suspend fun entries(includeHidden: Boolean = false): List<CatalogEntry> {
+    suspend fun entries(includeHidden: Boolean = false, refreshScores: Boolean = true): List<CatalogEntry> {
+        val epoch = synchronized(state) { revision }
         catalog.refresh() // Fire-and-forget. Even an empty cold catalog never waits for a provider.
-        val result = rebuild()
+        val base = rebuild()
+        val scores = if (refreshScores && base.any { !it.channel }) fixtures.scoreboard() else fixtures.scoreboardSnapshot()
+        val result = ScoreEnrichment.apply(base, scores, presentation(), time.wallMillis())
+        synchronized(state) {
+            if (epoch != revision) return emptyList()
+            result.forEach { posterEntries[it.id] = it }
+            while (posterEntries.size > 2048) posterEntries.remove(posterEntries.keys.first())
+        }
         return if (includeHidden) result else result.filter { CatalogVisibility.visible(it, time.wallMillis()) }
     }
 
@@ -91,10 +99,8 @@ class EntryCatalog(
                 cache = Cached(epoch, rows, knownFixtures, result)
                 for (entry in result) {
                     aliases[entry.id] = entry.listings.map { it.id }.toSet()
-                    posterEntries[entry.id] = entry
                 }
                 while (aliases.size > 2048) aliases.remove(aliases.keys.first())
-                while (posterEntries.size > 2048) posterEntries.remove(posterEntries.keys.first())
                 // Revision-fenced initiation: obsolete aggregation cannot restart fixture work.
                 result.filter { it.needsFixtureLookup && it.listings.any { row ->
                     Leagues.allowed(Leagues.find(row.league, preferences.leagueAliases))
@@ -105,20 +111,20 @@ class EntryCatalog(
         }
     }
 
-    suspend fun find(id: String): CatalogEntry? {
+    suspend fun find(id: String, refreshScores: Boolean = true): CatalogEntry? {
         val old = synchronized(state) { aliases[id].orEmpty() }
-        return entries(includeHidden = true).find { it.id == id || it.listings.any { row -> row.id == id || row.id in old } }?.copy(id = id)
+        return entries(includeHidden = true, refreshScores = refreshScores).find { it.id == id || it.listings.any { row -> row.id == id || row.id in old } }?.copy(id = id)
     }
 
     /** Explicit selection is the only other fixture-lookup trigger. Streams never wait for it. */
     suspend fun selected(id: String, waitMillis: Long = 0): CatalogEntry? {
         val epoch = synchronized(state) { revision }
-        val row = find(id) ?: return null
+        val row = find(id, refreshScores = waitMillis > 0) ?: return null
         val work = synchronized(state) { if (epoch != revision) return null else fixtures.request(row, options) }
         if (waitMillis > 0 && work.isNotEmpty()) {
             try { kotlinx.coroutines.withTimeoutOrNull(waitMillis) { work.forEach { it.await() } } }
             catch (_: CancellationException) { currentCoroutineContext().ensureActive() }
-            return find(id)
+            return find(id, refreshScores = false)
         }
         return row
     }

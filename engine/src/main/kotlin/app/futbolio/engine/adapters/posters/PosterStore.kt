@@ -47,7 +47,8 @@ internal class PosterStore(
                 live = item.state(time.wallMillis()) in listOf(MatchState.LIVE, MatchState.HALFTIME),
                 statusVerified = item.fixture?.let { it.fresh(time.wallMillis()) || it.state in listOf(MatchState.FINISHED, MatchState.CANCELLED) } == true,
                 competitionLightBackground = BundledArtwork.competitionLightBackground(item.league.id),
-                channelLogo = if (item.home == null && item.away == null) BundledArtwork.channel(item.title) else null)
+                channelLogo = if (item.home == null && item.away == null) BundledArtwork.channel(item.title) else null,
+                score = item.fixture?.scoreText(time.wallMillis()).orEmpty(), minute = item.fixture?.clockText(time.wallMillis()).orEmpty())
             return renderers.withPermit {
                 synchronized(cache) { cache[id]?.takeIf { it.model == model }?.bytes }
                     ?: withContext(cpu) { renderer.renderMatch(model) }.also { bytes ->

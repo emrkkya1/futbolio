@@ -230,7 +230,7 @@ internal val theme = darkColorScheme(primary = Color(0xffb4ff62), secondary = Co
     val scope = rememberCoroutineScope()
     AlertDialog(onDismissRequest = dismiss, title = { Text("Match settings") }, text = { Column {
         OutlinedTextField(zone, { zone = it }, label = { Text("Display timezone (IANA)") })
-        Text("Curated competitions only: live and starting within 24 hours. Matches expire 2 hours after kickoff, or 3 hours for cups/tournaments. Status is estimated unless verified on selection. No score enrichment. Advanced aliases can be imported in JSON.")
+        Text("Curated competitions only: live and starting within 24 hours. ESPN scores, match minutes and halftime status are added when matched; confirmed ended matches are hidden. Otherwise status is estimated and matches expire after 2 hours, or 3 hours for cups/tournaments. Advanced aliases can be imported in JSON.")
         if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
     } }, confirmButton = { TextButton(onClick = { scope.launch { val result = save(options.copy(scoresEnabled = false, hideFinished = true, showHalftime = true, displayTimeZone = zone.trim())); if (result.saved) dismiss() else error = result.error } }) { Text("Save") } },
         dismissButton = { TextButton(onClick = dismiss) { Text("Cancel") } })

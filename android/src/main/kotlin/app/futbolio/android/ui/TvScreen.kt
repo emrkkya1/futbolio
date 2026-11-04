@@ -206,7 +206,7 @@ internal val tvTheme = darkColorScheme(primary = Color(0xffb4ff62), secondary = 
     val scope = rememberCoroutineScope()
     AlertDialog(onDismissRequest = dismiss, title = { Text("Match settings") }, text = { Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
         OutlinedTextField(zone, { zone = it }, label = { Text("Display timezone (IANA)") })
-        Text("Curated competitions only: live and starting within 24 hours. Matches expire after 2 hours, or 3 hours for cups/tournaments. Status is estimated unless verified on selection. No score enrichment. Advanced aliases can be imported in JSON.")
+        Text("Curated competitions only: live and starting within 24 hours. ESPN scores, match minutes and halftime status are added when matched; confirmed ended matches are hidden. Otherwise status is estimated and matches expire after 2 hours, or 3 hours for cups/tournaments. Advanced aliases can be imported in JSON.")
         if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
     } }, confirmButton = { TvAction("Save") { scope.launch { val result = save(options.copy(scoresEnabled = false, hideFinished = true, showHalftime = true, displayTimeZone = zone.trim())); if (result.saved) dismiss() else error = result.error } } },
         dismissButton = { TvAction("Cancel", onClick = dismiss) })

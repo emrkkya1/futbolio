@@ -88,7 +88,13 @@ class AndroidPosters : PosterRenderer {
                     fitted(name, x, 426f, 236f, 28f, center = true)
                 }
                 team(model.home, model.homeLogo, 178f); team(model.away, model.awayLogo, 462f)
-                text("VS", 320f, 313f, 17f, muted, center = true)
+                p.typeface = Typeface.DEFAULT_BOLD
+                val scoreSize = (38 downTo 22).firstOrNull { size ->
+                    p.textSize = size.toFloat()
+                    p.measureText(model.score) <= 116f
+                }?.toFloat() ?: 22f
+                text(model.score.ifBlank { "VS" }, 320f, 313f, if (model.score.isBlank()) 17f else scoreSize,
+                    if (model.score.isBlank()) muted else white, bold = model.score.isNotBlank(), center = true)
             } else {
                 val hasLogo = logo(model.channelLogo, 154f, 228f, 332f, 120f)
                 fitted(model.title, 320f, if (hasLogo) 424f else 292f, 520f, if (hasLogo) 32f else 44f, center = true)
@@ -105,6 +111,14 @@ class AndroidPosters : PosterRenderer {
                 c.drawLine(307f, 568f, 333f, 568f, p); p.style = Paint.Style.FILL
             }
             fitted(model.league.uppercase(Locale.ROOT), 320f, 603f, 390f, 14f, center = true, color = muted)
+            if (model.minute.isNotBlank()) {
+                p.typeface = Typeface.DEFAULT_BOLD
+                val minuteSize = (32 downTo 20).firstOrNull { size ->
+                    p.textSize = size.toFloat()
+                    p.measureText(model.minute) <= 112f
+                }?.toFloat() ?: 20f
+                text(model.minute, 554f, 578f, minuteSize, mint, bold = true, center = true)
+            }
             val mark = Path().apply {
                 fillType = Path.FillType.EVEN_ODD
                 moveTo(65f, 553f); lineTo(86f, 574f); lineTo(65f, 595f); lineTo(44f, 574f); close()

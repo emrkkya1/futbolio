@@ -12,7 +12,9 @@ object CatalogVisibility {
     fun visible(entry: CatalogEntry, now: Long): Boolean {
         if (entry.channel) return true
         if (!Leagues.allowed(entry.league) || entry.ambiguous || entry.starts <= 0) return false
-        if (entry.starts > now + UPCOMING || now >= entry.starts + duration(entry)) return false
+        if (entry.starts > now + UPCOMING) return false
+        val verifiedLive = entry.fixture?.let { it.fresh(now) && it.state in setOf(MatchState.LIVE, MatchState.HALFTIME) } == true
+        if (!verifiedLive && now >= entry.starts + duration(entry)) return false
         return entry.state(now) !in setOf(MatchState.FINISHED, MatchState.CANCELLED, MatchState.POSTPONED)
     }
 }
