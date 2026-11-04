@@ -1,5 +1,43 @@
 # Live provider verification (PC/JVM, no emulator)
 
+## Champions League repair checkpoint — 4 November 2026 UTC
+
+At approximately 21:46 UTC, the real local Stremio API returned **7 inline stream
+choices each** for PSV Eindhoven–Club Brugge and RB Leipzig–Manchester City.
+Both fixtures included PapazSports, Taraftarium24, FutbolVivo and 720pstream.
+For each fixture, at least one source from each provider passed strict recognized
+media verification through the local relay, including decrypted 720p AES-128
+segments. PPV resolved no static media, as expected. No website-only options were
+included. This verifies transport, not native Android/Stremio decoded playback.
+
+Repairs include Turkish UEFA competition names, team aliases, clock-only listings
+after Istanbul midnight, and region/quality labels incorrectly used as leagues.
+The requested grouping rule accepts a shared normalized team and the same kickoff
+minute, irrespective of home/away order; exact-rule matches group transitively.
+Clock-only date correction requires independent still-live dated evidence.
+
+720p's published bootstrap replaced the old minified-variable layout. An additional
+ad-heavy response exhausted a naive global scan budget before that bootstrap;
+bounded per-script scanning and small-script-first ordering fix that failure.
+
+Frozen real-provider state extracts for all five catalogs plus the 720p event,
+embed, player and auth chain are saved under
+`engine/src/test/resources/providers/states/2026-11-04/`. `CapturedProviderStateTest`
+runs offline at a fixed clock. The extracts remove credentials, active hostnames,
+tracking code and unrelated content; their README records the transformations.
+
+Focused live diagnosis (time-dependent target fixtures):
+
+```sh
+./gradlew :engine:liveTest --tests app.futbolio.engine.MatchStreamDiagnosticsTest
+```
+
+The diagnostic reports independent provider/media outcomes; its aggregate JUnit
+success must not substitute for reading individual media-verification flags.
+`FUTBOLIO_TRACE_DIRECTORY` optionally saves private raw responses during the
+`traceTarget720PlayerStages` case. These may contain credentials: never commit or
+publish them. Ordinary tests never capture or contact live providers.
+
 Each enabled bundled provider has its **own JUnit case**. The test discovers real match listings, selects up to three non-expired started or unknown-start matches, resolves up to two HLS choices per match, and fetches media through the production upstream/session path. Future matches are not treated as live. Channels are counted separately and cannot substitute for discovering and testing a match.
 
 ## Provider contract and registration

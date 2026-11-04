@@ -1,0 +1,1 @@
+{"valid_until":2000000000,"protocol":1,"scode":"fixture-renewed-code","ts":2000000000,"csrf_expires_at":2000000000,"reauthorize_at":2000000000,"session_id":"fixture-renewed-session","refresh_after":300,"success":true,"device_id":"fixture-renewed-device","host_id":"fixture-edgeHostId"}

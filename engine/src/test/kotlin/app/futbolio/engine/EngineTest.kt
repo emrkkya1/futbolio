@@ -87,9 +87,17 @@ class EngineTest {
         assertTrue(get("$base/catalog/tv/unknown.json").contains("[]"))
         assertTrue(get("$base/meta/tv/unknown.json").contains("null")); assertTrue(get("$base/stream/tv/unknown.json").contains("[]"))
     }
-    @Test fun metadataAndWebsiteFallback() = withEngine { e, _ ->
+    @Test fun metadataAndPlayableStreamsExcludeWebsiteFallback() = withEngine { e, _ ->
         val row = e.catalog.items().first(); assertTrue(get("${e.host.base}/meta/tv/${Web.enc(row.id)}.json").contains(row.title))
-        assertTrue(get("${e.host.base}/stream/tv/${Web.enc(row.id)}.json").contains("externalUrl"))
+        val streams = codec.parseToJsonElement(get("${e.host.base}/stream/tv/${Web.enc(row.id)}.json")).obj().a("streams")
+        assertEquals(1, streams.size)
+        assertTrue(streams.all { it.obj().s("url").isNotBlank() && "externalUrl" !in it.obj() })
+    }
+    @Test fun websiteOnlyResolutionReturnsNoStremioStreams() = withEngine { e, f ->
+        val row = e.catalog.items().first()
+        f.offline = true
+        val streams = codec.parseToJsonElement(get("${e.host.base}/stream/tv/${Web.enc(row.id)}.json")).obj().a("streams")
+        assertTrue(streams.isEmpty())
     }
     @Test fun relayBytesMimeHeadersAndRanges() = withEngine { e, f ->
         val row = e.catalog.items().first(); val response = codec.parseToJsonElement(get("${e.host.base}/stream/tv/${Web.enc(row.id)}.json")).obj()

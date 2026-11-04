@@ -16,7 +16,9 @@ import java.util.Base64
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 import app.futbolio.engine.adapters.providers.shared.StaticPlayerResolver
+import app.futbolio.engine.adapters.providers.shared.StaticPlayerData
 
 /** Static HTML/JSON/literal-data adapter. Never evaluates provider scripts. */
 internal object Stream720Provider : Provider {
@@ -58,12 +60,16 @@ internal object Stream720Provider : Provider {
         ?: error("720pstream player data layout changed")
     private fun decode(text: String): String {
         require(text.length <= 16_384)
-        return Base64.getDecoder().decode(text).toString(Charsets.UTF_8)
+        val compact = text.filterNot(Char::isWhitespace)
+        return runCatching { Base64.getDecoder().decode(compact) }.getOrElse { Base64.getUrlDecoder().decode(compact) }
+            .toString(Charsets.UTF_8)
     }
     private fun literal(text: String, name: String) = capture(text, """\b$name="([^"\r\n]+)"""")
     internal fun nestedPlayer(html: String, base: String): String {
         val tag = Jsoup.parse(html, base).selectFirst("script[data-pldm][data-pid][data-play][data-gc]") ?: error("Missing embed data")
-        val config = codec.parseToJsonElement(capture(html, """const siteConfig\s*=\s*(\{[^;]+\});""")).obj()
+        val config = StaticPlayerData.objects(html).filter { value ->
+            listOf("csrf", "csrf_ip", "sec_expires", "sec_hash").all { value.s(it).isNotBlank() }
+        }.singleOrNull() ?: error("Missing or ambiguous embed configuration")
         val host = tag.attr("data-pldm")
         require(host.matches(Regex("[a-zA-Z0-9.-]+")) && '.' in host)
         val category = tag.attr("data-gc").also { require(it.matches(Regex("[a-zA-Z0-9_-]+"))) }
@@ -76,8 +82,59 @@ internal object Stream720Provider : Provider {
         }.build().toString()
     }
 
-    internal data class PlayerData(val media: String, val auth: String, val token: String, val device: String)
-    internal fun playerData(html: String): PlayerData {
+    internal data class PlayerData(val media: String, val auth: String, val token: String, val device: String) {
+        override fun toString() = "PlayerData(credentials=[redacted])"
+    }
+
+    private fun fieldKey(value: String) = value.lowercase().filter(Char::isLetterOrDigit)
+
+    private fun field(config: JsonObject, vararg names: String): JsonElement? {
+        val keys = names.map(::fieldKey).toSet()
+        val values = config.filterKeys { fieldKey(it) in keys }.values.distinct()
+        require(values.size <= 1) { "Ambiguous player field" }
+        return values.singleOrNull()
+    }
+
+    /** Detect the protocol's data shape, not its global name or minified local identifiers. */
+    private fun publishedPlayer(html: String): JsonObject? {
+        val candidates = StaticPlayerData.objects(html).filter { config ->
+            val keys = config.keys.map(::fieldKey).toSet()
+            listOf(setOf("urlsource", "sourceurl", "mediaurl"), setOf("sectokenurl", "authurl"),
+                setOf("deviceid"), setOf("strunqid", "streamid")).all { aliases -> keys.any { it in aliases } }
+        }
+        if (candidates.size <= 1) return candidates.singleOrNull()
+        val selectedIds = Jsoup.parse(html).select("script[data-player-id]").map { it.attr("data-player-id") }.distinct()
+        return candidates.filter { (field(it, "playerId") as? JsonPrimitive)?.content in selectedIds }.singleOrNull()
+            ?: error("Ambiguous published player configurations")
+    }
+
+    internal fun playerData(html: String): PlayerData = playerData(html, publishedPlayer(html))
+
+    private fun playerData(html: String, config: JsonObject?): PlayerData {
+        if (config != null) {
+            fun required(vararg names: String) = (field(config, *names) as? JsonPrimitive)?.content.orEmpty()
+                .also { require(it.isNotBlank() && it.length <= 4096) { "Missing player field" } }
+            fun url(vararg names: String): String {
+                val element = field(config, *names)
+                val value = if (element is JsonArray) {
+                    require(element.size <= 16_384)
+                    element.joinToString("") { char -> (char as JsonPrimitive).content.toInt().also { require(it in 0..127) }.toChar().toString() }
+                } else required(*names)
+                return if (value.startsWith("https://", true) || value.startsWith("http://", true)) value else decode(value)
+            }
+            val header = (field(config, "tokenName") as? JsonPrimitive)?.content.orEmpty().ifBlank { "X-CSRF-Auth" }
+            require(header.equals("X-CSRF-Auth", ignoreCase = true))
+            val media = url("urlSource", "sourceUrl", "mediaUrl")
+            val auth = url("secTokenUrl", "authUrl").toHttpUrl().newBuilder().apply {
+                addQueryParameter("scode", required("sCode"))
+                addQueryParameter("stream", required("strUnqId", "streamId"))
+                addQueryParameter("expires", required("expireTs", "expires"))
+                addQueryParameter("u_id", required("device_id", "deviceId"))
+                addQueryParameter("session_id", required("session_id", "sessionId"))
+                addQueryParameter("host_id", required("edgeHostId", "hostId"))
+            }.build().toString()
+            return validatedPlayerData(media, auth, decode(required("csrf_token", "csrfToken")), required("device_id", "deviceId"))
+        }
         val codes = capture(html, """F=d\(String\.fromCharCode\(\.\.\.\[([\d,]+)\]\)\)""")
         require(codes.length <= 32_768)
         val media = decode(codes.split(',').map { it.toInt().also { n -> require(n in 0..127) }.toChar() }.joinToString(""))
@@ -92,7 +149,14 @@ internal object Stream720Provider : Provider {
             addQueryParameter("session_id", capture(html, """l=_\(\{scode:"[^"]+",ts:y,session_id:"([^"]+)""""))
             addQueryParameter("host_id", capture(html, """host_id=\$\{encodeURIComponent\("([^"]+)"\)"""))
         }.build().toString()
-        for (url in listOf(media, auth)) require(url.toHttpUrl().isHttps && url.toHttpUrl().username.isEmpty() && url.toHttpUrl().password.isEmpty())
+        return validatedPlayerData(media, auth, token, device)
+    }
+
+    private fun validatedPlayerData(media: String, auth: String, token: String, device: String): PlayerData {
+        for (url in listOf(media, auth)) {
+            Web.url(url)
+            require(url.toHttpUrl().isHttps && url.toHttpUrl().username.isEmpty() && url.toHttpUrl().password.isEmpty())
+        }
         SourceHeaders(authOrigin = Web.origin(auth), authToken = token)
         return PlayerData(media, auth, token, device)
     }
@@ -101,11 +165,17 @@ internal object Stream720Provider : Provider {
         val page = net.text(item.page)
         val embed = pageEmbed(page.text, page.url) ?: error("Provider has not published a player for this event")
         val doc = net.text(embed, SourceHeaders(page.url))
+        val direct = publishedPlayer(doc.text)
+        if (direct != null) return sessionChoice(item, net, playerData(doc.text, direct), doc.url)
         if (Jsoup.parse(doc.text).selectFirst("script[data-pldm][data-pid][data-play][data-gc]") == null) {
             return StaticPlayerResolver(net).resolve(item.copy(players = listOf(Player(doc.url))))
         }
         val player = nestedPlayer(doc.text, doc.url)
         val data = playerData(net.text(player, SourceHeaders(doc.url)).text)
+        return sessionChoice(item, net, data, player)
+    }
+
+    private suspend fun sessionChoice(item: Listing, net: Upstream, data: PlayerData, player: String): List<StreamChoice> {
         val session = Session(net, data, player)
         session.prepare()
         return listOf(StreamChoice(item.title, session.mediaUrl(), SourceHeaders(player, Web.origin(player)), mediaType = "hls", session = session))
@@ -114,8 +184,11 @@ internal object Stream720Provider : Provider {
     /** Supports both server-rendered frames and the site's published Next.js player data. */
     internal fun pageEmbed(html: String, base: String): String? {
         val doc = Jsoup.parse(html, base)
-        doc.selectFirst("iframe.video[src]")?.absUrl("src")?.takeIf { it.isNotBlank() }?.let { return it }
-        for (payload in flightPayloads(doc)) {
+        val frames = doc.select("iframe.video[src], #player iframe[src], iframe[data-player][src]")
+            .mapNotNull { runCatching { Web.resolve(base, it.attr("src")) }.getOrNull() }.distinct()
+        if (frames.size == 1) return frames.single()
+        val payloads = flightPayloads(doc)
+        for (payload in payloads) {
             // iframeUrl is the selected event's player prop. Raw iframeuri fields may
             // belong to other events in sidebars; never borrow another fixture's player.
             for (field in Regex("\"iframeUrl\"\\s*:\\s*").findAll(payload).take(8)) {
@@ -124,7 +197,10 @@ internal object Stream720Provider : Provider {
                 runCatching { Web.resolve(base, value) }.getOrNull()?.let { return it }
             }
         }
-        return null
+        // A null selected-event prop is not permission to substitute an advertisement/sidebar.
+        if (payloads.isNotEmpty()) return null
+        return doc.select("iframe[src]").mapNotNull { runCatching { Web.resolve(base, it.attr("src")) }.getOrNull() }
+            .distinct().singleOrNull()
     }
 
     private fun flightPayloads(doc: org.jsoup.nodes.Document): List<String> =

@@ -126,7 +126,8 @@ internal class StremioServer(
             row.listings.map { listing -> async { resolver.resolve(listing, expectedRevision = resolverRevision).map { it.copy(providers = listOf(listing.source.name)) } } }.awaitAll().flatten()
         }
         if (resolverRevision != resolver.revision()) return json(call, buildJsonObject { put("streams", JsonArray(emptyList())) })
-        val streams = deduplicateStreams(choices).map { wire.stream(it) { choice -> tokens.register(choice.url, choice.headers, playlist = true, session = choice.session) } }
+        val streams = deduplicateStreams(choices.filter { it.url.isNotBlank() && it.externalUrl.isBlank() })
+            .map { wire.stream(it) { choice -> tokens.register(choice.url, choice.headers, playlist = true, session = choice.session) } }
         json(call, buildJsonObject { put("streams", JsonArray(streams)) })
     }
 }

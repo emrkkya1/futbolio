@@ -104,12 +104,14 @@ class CatalogCurationTest {
         assertFalse(entry.needsFixtureLookup)
     }
 
-    @Test fun opposingTeamsSquadsReversedFixturesAndDifferentDatesRemainSeparate() {
-        for (other in listOf("Galatasaray vs Fenerbahçe", "Galatasaray U19 vs Stuttgart U19",
-            "Galatasaray Women vs Stuttgart Women", "Stuttgart vs Galatasaray", "Galatasaray B vs Stuttgart B")) {
+    @Test fun distinctSquadsAndDifferentDatesRemainSeparate() {
+        for (other in listOf("Galatasaray U19 vs Stuttgart U19",
+            "Galatasaray Women vs Stuttgart Women", "Galatasaray B vs Stuttgart B")) {
             assertEquals(2, aggregate(row(), row("b", other)).size, other)
         }
         assertEquals(2, aggregate(row(), row("b", start = now + 24 * hour)).size)
+        assertEquals(1, aggregate(row(), row("b", "Galatasaray vs Fenerbahçe")).size)
+        assertEquals(1, aggregate(row(), row("b", "Stuttgart vs Galatasaray")).size)
     }
 
     @Test fun conflictingKnownLeaguesStayHiddenUntilFixtureResolvesThem() {
@@ -142,6 +144,10 @@ class CatalogCurationTest {
         assertEquals("eng.1", Leagues.find("2026/27 England Premier League").id)
         assertEquals("tur.cup", Leagues.find("Ziraat Türkiye Kupası").id)
         assertFalse(Leagues.allowed(Leagues.find("Chile Premier League")))
+        assertEquals("uefa.champions", Leagues.find("UEFA Şampiyonlar Ligi").id)
+        assertEquals("uefa.champions", Leagues.find("UEFA Şampiyonlar Ligi Lig Aşaması").id)
+        assertEquals("uefa.europa", Leagues.find("UEFA Avrupa Ligi").id)
+        assertFalse(Leagues.allowed(Leagues.find("AFC Şampiyonlar Ligi")))
     }
 
     @Test fun genreFilteringCombinesWithSearchAndPaginationAcrossCatalogs() {

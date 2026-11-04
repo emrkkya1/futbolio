@@ -56,7 +56,7 @@ internal class FutbolioEngine(
     override val phase = mutablePhase.asStateFlow()
     internal val diagnostics = Diagnostics(time, limits)
     internal val catalog = Catalog(scope, net, sources, providers, time, limits)
-    internal val resolver = StreamResolver(scope, net, providers, time, limits)
+    internal val resolver = StreamResolver(scope, net, providers, time, limits, diagnostics)
     internal val tokens = RelayTokens(host.base, limits, time::monotonicMillis)
     internal val workbench = ProviderWorkbench(scope, net, resolver, providers, SegmentProbe(net), time)
     private val fixtures = FixtureService(scope, scoreFeed, time)
