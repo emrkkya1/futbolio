@@ -20,7 +20,7 @@ import java.net.ServerSocket
 import java.net.URI
 import kotlin.test.*
 
-/** Live Stremio HTTP path, including rewriting, credential forwarding and AES decryption.
+/** Manual live Stremio HTTP path, including rewriting, credential forwarding and AES decryption.
  * This is transport verification, NOT native Stremio video/audio acceptance. */
 @RunWith(Parameterized::class)
 class LiveStremioRelayVerificationTest(private val label: String, private val source: SourceConfig) {

@@ -43,6 +43,7 @@ android {
         testInstrumentationRunner = "app.futbolio.android.SmokeInstrumentation"
     }
     buildFeatures { compose = true }
+    testOptions.unitTests.all { it.systemProperty("futbolio.offlineTests", "true") }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     signingConfigs {
         val keyPath = System.getenv("FUTBOLIO_KEYSTORE")

@@ -60,6 +60,17 @@ To add an adapter, implement `Provider` in its own `engine/adapters/providers/<n
 
 Success requires recognized MPEG-TS/MP4 bytes. AES-128 content is decrypted and checked; a playlist, website fallback, encryption key alone, or arbitrary encrypted payload is not success. Explicit and sequence-derived IVs are supported. No website scripts execute, no tokens are hardcoded, and no Android emulator is used. This does not establish native video/audio playback or match identity.
 
+## Manual-only live suite
+
+All internet-backed test cases live under [`engine/src/live/`](../engine/src/live/).
+They keep the `liveTest` source set/task name for command compatibility and are
+excluded from ordinary `test`, `check`, and automated CI. Compile without running
+providers with `./gradlew :engine:liveTestClasses`.
+
+`LiveProviderVerifierTest` and the other fixture-backed provider/relay tests stay
+under `src/test`: they exercise live-verification logic without live dependencies.
+Loopback HTTP servers and self-hosted LAN relay fixtures are not online services.
+
 ## Run all providers
 
 From the project directory, with the project's JDK/SDK environment set:

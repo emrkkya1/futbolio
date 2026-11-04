@@ -104,10 +104,36 @@ Requires **JDK 21**, **Android SDK platform 35 and build tools** for Android tas
 
 - Android debug APK: `android/build/outputs/apk/debug/android-debug.apk`.
 - Desktop distribution: `desktop/build/compose/binaries/main/app/`.
-- Host tests: `:desktop:test` (requires a graphical session) and `:android:testDebugUnitTest`.
-- Live provider tests are separate, opt-in checks; see [live testing](docs/LIVE-PROVIDER-TESTS.md). Successful media retrieval is not proof of Stremio playback.
+- Host unit tests: `:desktop:headlessTest` and `:android:testDebugUnitTest`. Desktop UI tests remain manual via `:desktop:test` (requires a graphical session).
+- Live provider tests reside under [`engine/src/live/`](engine/src/live/) and run manually with `./gradlew :engine:liveTest`, never as CI gates; see [live testing](docs/LIVE-PROVIDER-TESTS.md). Successful media retrieval is not proof of Stremio playback.
 
 Native packages must be built on their target OS. Android release builds require signing credentials; debug or development-signed builds are not production releases. Windows build and device-check helpers are in [`scripts/`](scripts/).
+
+### CI and Android releases
+
+Pushes and pull requests run network-isolated core tests, headless desktop and
+Android unit tests, version checks, and Android debug/release lint. CI does not
+run Compose UI tests, live-provider checks, or desktop packaging.
+
+To publish an APK, increase `futbolioVersion` in `gradle.properties`, update
+`CHANGELOG.md`, and merge/push to `main`. After checks pass, CI builds a signed,
+optimized release APK and publishes **`futbolio-vX.X.X.apk`** in the GitHub release
+tagged `vX.X.X` at that exact commit. Unchanged versions and existing version tags
+do not publish again. Failed releases can be retried by rerunning the failed
+workflow; no version bump is needed unless an APK/tag was already published.
+
+Repository administrators must first configure these GitHub Actions secrets:
+
+- `ANDROID_KEYSTORE_BASE64`: base64-encoded release keystore.
+- `ANDROID_STORE_PASSWORD`: keystore password.
+- `ANDROID_KEY_ALIAS`: signing-key alias.
+- `ANDROID_KEY_PASSWORD`: signing-key password.
+
+Use the same backed-up release key for all updates. Missing secrets fail the
+release rather than producing a debug-signed APK. Signing files are restored only
+for the build and removed afterward; never commit them. No custom GitHub token is
+needed: the release job uses its scoped `GITHUB_TOKEN` with contents-write access.
+See [CI and release operations](docs/CI.md) for validation and recovery details.
 
 ## Architecture and documentation
 

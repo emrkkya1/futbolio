@@ -21,7 +21,7 @@ import java.net.ServerSocket
 import java.net.URI
 import kotlin.test.*
 
-/** Explicit live diagnostic: inspect the same fixtures across independently discovered providers. */
+/** Manual live diagnostic: inspect the same fixtures across independently discovered providers. */
 class MatchStreamDiagnosticsTest {
     private val target = Regex("(?i)psv|brugge|leipzig|manchester city|man city|rbl")
     @Test fun traceTarget720PlayerStages() = runBlocking<Unit> {

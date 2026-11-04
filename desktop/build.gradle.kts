@@ -20,6 +20,16 @@ tasks.test {
     systemProperty("futbolio.offlineTests", "true")
     testLogging { events("passed", "failed", "skipped") }
 }
+tasks.register<Test>("headlessTest") {
+    description = "Run offline desktop host/unit tests without a display or Compose UI tests."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    exclude("**/DesktopUiTest*.class")
+    systemProperty("java.awt.headless", "true")
+    systemProperty("futbolio.offlineTests", "true")
+    testLogging { events("passed", "failed", "skipped") }
+}
 compose.desktop { application {
     mainClass = "app.futbolio.desktop.MainKt"
     nativeDistributions {

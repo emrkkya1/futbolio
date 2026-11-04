@@ -10,7 +10,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.Test
 import kotlin.test.*
 
-/** Explicit live task only: prove that public entry links don't become media/browser URLs. */
+/** Manual live task only: prove that public entry links don't become media/browser URLs. */
 class ProviderEntryVerificationTest {
     @Test fun papazResolvesItsPublishedEntryToTheCurrentPortal() = runBlocking {
         withTimeout(35_000) {

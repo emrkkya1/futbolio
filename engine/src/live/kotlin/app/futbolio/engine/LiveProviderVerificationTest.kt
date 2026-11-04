@@ -11,7 +11,7 @@ import org.junit.runners.Parameterized
 import java.io.File
 import kotlin.test.assertEquals
 
-/** Explicit task only. One provider's pass can never mask another's failure. */
+/** Manual live task only. One provider's pass can never mask another's failure. */
 @RunWith(Parameterized::class)
 class LiveProviderVerificationTest(private val label: String, private val source: SourceConfig) {
     companion object {

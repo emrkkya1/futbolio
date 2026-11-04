@@ -15,6 +15,9 @@ dependencies {
     testImplementation(libs.coroutines.test)
 }
 val liveTest by sourceSets.creating
+// Keep online checks physically separate and opt-in; test/check never depend on liveTest.
+kotlin.sourceSets.getByName("liveTest").kotlin.setSrcDirs(listOf("src/live/kotlin"))
+liveTest.resources.setSrcDirs(listOf("src/live/resources"))
 configurations[liveTest.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
 configurations[liveTest.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
 dependencies { add(liveTest.implementationConfigurationName, sourceSets.test.get().output) }
@@ -27,7 +30,7 @@ tasks.test {
     testLogging { events("passed", "failed", "skipped"); showStandardStreams = true }
 }
 tasks.register<Test>("liveTest") {
-    description = "Explicit internet-backed provider verification; never part of test/check."
+    description = "Manual internet-backed provider verification from src/live; never part of test/check."
     group = "verification"
     testClassesDirs = liveTest.output.classesDirs
     classpath = liveTest.runtimeClasspath

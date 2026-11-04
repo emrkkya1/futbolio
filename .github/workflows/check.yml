@@ -1,8 +1,17 @@
 name: Checks
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
 jobs:
   offline-engine:
+    name: Offline core tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -14,33 +23,125 @@ jobs:
         run: |
           bash ./gradlew prepareOfflineTestDependencies --no-daemon --console=plain
           bash ./gradlew --stop
-      - name: Run engine tests with no external network
-        # A separate network namespace has loopback only, including for test JVMs.
+      - name: Run core tests with no external network
+        # The test JVMs have loopback only. --offline alone only limits Gradle downloads.
         run: sudo --preserve-env=JAVA_HOME,ANDROID_HOME,ANDROID_SDK_ROOT,PATH env GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}" unshare --net bash -c 'ip link set lo up; bash ./gradlew :domain:test :application:test :engine:check --offline --no-daemon --console=plain'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: offline-engine-tests
-          path: engine/build/reports/tests/
-  verify:
-    runs-on: windows-latest
+          name: offline-core-tests
+          path: |
+            domain/build/reports/tests/
+            application/build/reports/tests/
+            engine/build/reports/tests/
+
+  unit-and-lint:
+    name: Host unit tests and Android lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
+      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
-      # Desktop packaging is deferred until the replacement build/release pipelines.
-      - name: Unit tests and Android debug build
-        run: ./gradlew.bat :domain:test :application:test :engine:check :desktop:test :android:verifyVersioning :android:testDebugUnitTest :android:assembleDebug --console=plain
+      - name: Validate release detection
+        run: python3 -m unittest discover -s scripts/ci -p 'test_*.py' -v
+      - name: Check whitespace
+        run: git show --format= --check HEAD
+      - name: Unit tests, version checks and lint (no UI or live tests)
+        run: bash ./gradlew :desktop:headlessTest :android:testDebugUnitTest :android:verifyVersioning :android:lintDebug :android:lintRelease --no-daemon --console=plain
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: checks-and-apps
+          name: unit-tests-and-lint
           path: |
-            domain/build/reports/tests/
-            application/build/reports/tests/
-            engine/build/reports/tests/
-            desktop/build/reports/
-            android/build/outputs/apk/debug/
+            desktop/build/reports/tests/headlessTest/
+            android/build/reports/tests/
+            android/build/reports/lint-results-*
+
+  version:
+    name: Detect new main version
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compare version with the commit before this push
+        id: version
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: python3 scripts/ci/release_version.py
+
+  release-apk:
+    name: Release versioned Android APK
+    needs: [offline-engine, unit-and-lint, version]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    concurrency:
+      group: apk-release-${{ needs.version.outputs.version }}
+      cancel-in-progress: false
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Restore release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing Android release signing secret: $name"
+              exit 1
+            fi
+          done
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/futbolio-release.keystore"
+      - name: Build signed release APK
+        env:
+          FUTBOLIO_KEYSTORE: ${{ runner.temp }}/futbolio-release.keystore
+          FUTBOLIO_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          FUTBOLIO_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          FUTBOLIO_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          bash ./gradlew :android:assembleRelease --no-daemon --console=plain
+          mkdir -p dist/release
+          cp android/build/outputs/apk/release/android-release.apk "dist/release/futbolio-v${VERSION}.apk"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          "$apksigner" verify "dist/release/futbolio-v${VERSION}.apk"
+      - name: Remove signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/futbolio-release.keystore"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: futbolio-v${{ env.VERSION }}
+          path: dist/release/futbolio-v${{ env.VERSION }}.apk
+          if-no-files-found: error
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "v${VERSION}" "dist/release/futbolio-v${VERSION}.apk" \
+            --target "$GITHUB_SHA" --title "Futbolio v${VERSION}" --generate-notes

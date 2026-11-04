@@ -4,6 +4,18 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
+## 0.3.2
+
+### Added
+- Publish signed, versioned Android APKs to GitHub Releases after successful
+  checks on version-increasing pushes to `main`.
+- Headless desktop unit-test task, Android debug/release lint gates, and tested
+  release-version detection. Desktop packaging and GUI tests are excluded from CI.
+
+### Changed
+- Move all internet-backed provider and stream diagnostics under `engine/src/live/`
+  for explicit manual execution; automated core tests remain network-isolated.
+
 ## 0.3.1
 
 ### Fixed

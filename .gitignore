@@ -7,3 +7,4 @@ local.properties
 config.json
 test-results/local-*
 dist/
+__pycache__/
