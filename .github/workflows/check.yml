@@ -31,8 +31,9 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Unit tests and applications
-        run: ./gradlew.bat :domain:test :application:test :engine:check :desktop:test :android:verifyVersioning :android:testDebugUnitTest :android:assembleDebug :desktop:createDistributable --console=plain
+      # Desktop packaging is deferred until the replacement build/release pipelines.
+      - name: Unit tests and Android debug build
+        run: ./gradlew.bat :domain:test :application:test :engine:check :desktop:test :android:verifyVersioning :android:testDebugUnitTest :android:assembleDebug --console=plain
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -43,4 +44,3 @@ jobs:
             engine/build/reports/tests/
             desktop/build/reports/
             android/build/outputs/apk/debug/
-            desktop/build/compose/binaries/main/app/
