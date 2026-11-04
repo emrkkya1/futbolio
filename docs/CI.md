@@ -35,6 +35,9 @@ signature is verified, then the APK is uploaded as both a workflow artifact and
 a GitHub release asset named `futbolio-vX.X.X.apk`. GitHub creates the `vX.X.X` tag
 at the checked commit, with generated release notes. PRs, non-main pushes, and
 tag pushes cannot publish. Windows/Linux desktop releases are deferred.
+An explicit **Run workflow** dispatch on `main` may also publish the current
+untagged version, after the same checks; use this to recover a failed release
+when workflow fixes were committed without changing the application version.
 
 ## Signing setup
 
@@ -53,7 +56,9 @@ job has contents-write permission. Releases use the built-in `GITHUB_TOKEN`.
 ## Recovery and local validation
 
 Missing signing secrets fail before the release build; checks are independent of
-them. Fix configuration and rerun failed jobs. A successfully published version
+them. Fix configuration and rerun failed jobs. A failed release
+can also be recovered after workflow fixes by dispatching **Checks** on `main`,
+provided its version has not been tagged yet. A successfully published version
 is immutable in this workflow: never overwrite its APK, reuse its version, or
 delete its tag merely to rebuild. Publish a higher version for a changed APK.
 If a tag/release was created but upload/publication was interrupted, inspect it

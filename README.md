@@ -121,6 +121,8 @@ optimized release APK and publishes **`futbolio-vX.X.X.apk`** in the GitHub rele
 tagged `vX.X.X` at that exact commit. Unchanged versions and existing version tags
 do not publish again. Failed releases can be retried by rerunning the failed
 workflow; no version bump is needed unless an APK/tag was already published.
+If the fix changes the workflow itself, use **Actions → Checks → Run workflow**
+on `main` to retry the current untagged version through all checks.
 
 Repository administrators must first configure these GitHub Actions secrets:
 
