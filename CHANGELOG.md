@@ -1,8 +1,8 @@
 # Changelog
 
 The version applies to Futbolio as a whole: shared engine, Stremio manifest,
-desktop application and Android application. Android's version code is a separate,
-monotonically increasing installation counter.
+desktop application and Android application. Android's integer version code is
+derived from that version using fixed-width numeric positions.
 
 ## 0.3.1
 
@@ -19,8 +19,8 @@ monotonically increasing installation counter.
 ### Added
 - Sanitized, dated real-provider regression states and offline resolution tests.
 - Safe resolution diagnostics and opt-in per-provider/live-relay investigation.
-- Central application version and Android installation counter in
-  `gradle.properties`, with generated shared runtime version information.
+- One application version in `gradle.properties`, generated shared runtime version
+  information, and a derived Android version code with enforced component limits.
 
 ### Verification
 - 208 core JVM tests and 4 Android host unit tests passed for the 0.3.1 build;

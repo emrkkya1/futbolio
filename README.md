@@ -77,8 +77,11 @@ The foreground service can continue after the activity closes, but Android may s
 ### Application versioning
 
 `futbolioVersion` in `gradle.properties` is the single application version for the
-engine, Stremio manifest, desktop package and Android APK. Increment
-`futbolioAndroidVersionCode` for each published Android update. Changes are recorded
+engine, Stremio manifest, desktop package and Android APK. Android's version code is
+derived automatically as `major × 1,000,000 + minor × 1,000 + patch` (e.g. `0.3.1`
+→ `3001`). Supported ranges are major `0..2099`, minor/patch `0..999`; `0.0.0`,
+prereleases, build suffixes and leading zeros are rejected. Use a higher application
+version for every published APK update, including rebuilds. Changes are recorded
 in [CHANGELOG.md](CHANGELOG.md); releases use `vX.Y.Z` tags on the reviewed commit
 after merging to `main`. Build every platform artifact from that same commit and
 preserve the Android signing key so updates retain settings. Debug-signed APKs are
