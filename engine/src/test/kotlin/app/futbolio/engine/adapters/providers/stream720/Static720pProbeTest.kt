@@ -62,12 +62,74 @@ class Static720pProbeTest {
         assertFails { Stream720Provider.nestedPlayer(embedHtml.replace("player.example", "player.example/@other"), "https://embed.example/") }
     }
 
+    private fun publishedPlayerHtml(media: String = "https://cdn.example/manifest.ts") = """
+        <script>window.SecKeyPlayerConfig=window.SecKeyPlayerConfig||{};
+        window.SecKeyPlayerConfig["fixture-player"]={"device_id":"fixture-device","strUnqId":"match-2",
+        "session_id":"session-2","secTokenUrl":"${b64("https://auth.example/")}","urlSource":"$media",
+        "sCode":"fresh-code","expireTs":123,"csrf_token":"${b64("fixture-header")}",
+        "tokenName":"X-CSRF-Auth","edgeHostId":"s-dynamic"};</script>
+    """
+
+    @Test fun publishedPlayerConfigurationUsesTheExistingRenewableSessionProtocol() {
+        val data = Stream720Provider.playerData(publishedPlayerHtml())
+        assertEquals("https://cdn.example/manifest.ts", data.media)
+        assertEquals("fixture-header", data.token)
+        assertEquals("fixture-device", data.device)
+        assertEquals("match-2", Web.query(data.auth, "stream"))
+        assertEquals("s-dynamic", Web.query(data.auth, "host_id"))
+        assertEquals("fresh-code", Web.query(data.auth, "scode"))
+        assertEquals("https://cdn.example/manifest.ts", Stream720Provider.playerData(publishedPlayerHtml(b64("https://cdn.example/manifest.ts"))).media)
+        assertFails { Stream720Provider.playerData(publishedPlayerHtml("http://cdn.example/live")) }
+        assertFails { Stream720Provider.playerData(publishedPlayerHtml().replace("123", "fetch('https://untrusted.example')")) }
+        assertFails { Stream720Provider.playerData(publishedPlayerHtml().replace("X-CSRF-Auth", "Cookie")) }
+        assertFalse(data.toString().contains("fixture-header"))
+    }
+
+    @Test fun configurationSurvivesRenamingFormattingNestingAndDataContainers() {
+        val original = publishedPlayerHtml()
+        val assignment = original.substringAfter("window.SecKeyPlayerConfig[\"fixture-player\"]=").substringBefore(";</script>").trim()
+        val expected = Stream720Provider.playerData(original)
+        val layouts = listOf(
+            original.replace("SecKeyPlayerConfig", "AnyFutureName").replace("fixture-player", "new-id"),
+            "<script>let renamed = $assignment;</script>",
+            "<script>new FuturePlayer({wrapper: {settings: $assignment}});</script>",
+            "<script type='application/json'>{\"players\":[$assignment]}</script>",
+            "<script>window.anything = JSON.parse(${JsonPrimitive(assignment)});</script>",
+            "<script>window.anything = JSON.parse(atob('${b64(assignment)}'));</script>",
+            "<div data-player-config='${assignment.replace("'", "&#39;")}'></div>",
+            "<div data-config='${b64(assignment)}'></div>",
+            "<script>/* unrelated code */\nconst renamed = $assignment; // trailing comment\n</script>",
+            "<script>const renamed = ${assignment.replace("\"device_id\":", "/* relocated field */ 'device_id' : ")};</script>",
+            "<script>const renamed = ${assignment.replace("\"urlSource\"", "'source_url'").replace("\"secTokenUrl\"", "'auth_url'").replace("\"strUnqId\"", "'stream_id'")};</script>",
+            "<script>const renamed = ${assignment.replace("\"https://cdn.example/manifest.ts\"", "[${b64("https://cdn.example/manifest.ts").map { it.code }.joinToString(",")}]")};</script>"
+        )
+        layouts.forEachIndexed { index, html -> assertEquals(expected, Stream720Provider.playerData(html), "Data layout $index") }
+        val noise = "<script>" + "function unrelated(){notLiteral();}".repeat(20_000) + "</script>"
+        assertEquals(expected, Stream720Provider.playerData(noise + original))
+        assertEquals(expected, Stream720Provider.playerData(original + noise))
+        assertEquals("different-match", Web.query(Stream720Provider.nestedPlayer(embedHtml.replace("siteConfig", "renamedBootstrap"), "https://embed.example/"), "v"))
+    }
+
+    @Test fun ambiguousDataDoesNotBorrowAnotherPlayersCredentials() {
+        val first = publishedPlayerHtml()
+        val second = first.replace("cdn.example", "other.example").replace("fixture-player", "other-player")
+        assertFails { Stream720Provider.playerData(first + second) }
+        val selected = first.replace("\"device_id\"", "\"playerId\":\"selected\",\"device_id\"") + second +
+            "<script data-player-id='selected' src='https://assets.example/player.js'></script>"
+        assertEquals("https://cdn.example/manifest.ts", Stream720Provider.playerData(selected).media)
+        assertFails { Stream720Provider.playerData(first.replace("\"urlSource\":", "\"mediaUrl\":\"https://wrong.example/live\",\"urlSource\":")) }
+        assertFails { Stream720Provider.playerData("<script>/* fake config should not be parsed: ${first.substringAfter("<script>").substringBefore("</script>")} */</script>") }
+    }
+
     @Test fun nextPlayerDataIsReadWithoutExecutingPageCodeAndPendingEventsStayUnplayable() {
         val json = """[1,"18:[\"${'$'}\",\"Player\",null,{\"iframeUrl\":\"https://embed.example/published\"}]"]"""
         val html = "<script>self.__next_f.push($json)</script>"
         assertEquals("https://embed.example/published", Stream720Provider.pageEmbed(html, source.url))
         assertEquals("https://embed.example/legacy", Stream720Provider.pageEmbed(
             "<iframe class='video' src='https://embed.example/legacy'></iframe>", source.url))
+        assertEquals("https://embed.example/new-layout", Stream720Provider.pageEmbed(
+            "<section class='renamed'><iframe src='https://embed.example/new-layout'></iframe></section>", source.url))
+        assertNull(Stream720Provider.pageEmbed("<iframe src='https://ads.example/'></iframe><iframe src='https://other.example/'></iframe>", source.url))
         assertNull(Stream720Provider.pageEmbed("<script>self.__next_f.push([1,\"{\\\"iframeUrl\\\":null,\\\"iframeuri\\\":\\\"\\\"}\"])</script>", source.url))
         assertNull(Stream720Provider.pageEmbed("<script>self.__next_f.push(fetch('https://untrusted.example'))</script>", source.url))
     }
@@ -183,7 +245,10 @@ class Static720pProbeTest {
             clear.size.toLong()
         }
     }
-    @Test fun fixtureStremioApiRelaysPlaylistsKeysAndMedia() = runBlocking {
+    @Test fun fixtureStremioApiRelaysPlaylistsKeysAndMedia() = runBlocking { verifyFixtureRelay(playerHtml()) }
+    @Test fun publishedConfigurationRelaysPlaylistsKeysAndMedia() = runBlocking { verifyFixtureRelay(publishedPlayerHtml()) }
+
+    private suspend fun verifyFixtureRelay(player: String) {
         val key = ByteArray(16) { it.toByte() }; val iv = ByteArray(16)
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
         cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
@@ -198,7 +263,7 @@ class Static720pProbeTest {
                     uri.path == "/soccer-online" -> schedule.toByteArray()
                     uri.path.startsWith("/live/soccer/") -> "<iframe class='video' src='https://embed.example/game'></iframe>".toByteArray()
                     uri.host == "embed.example" -> embedHtml.toByteArray()
-                    uri.host == "player.example" -> playerHtml().toByteArray()
+                    uri.host == "player.example" -> player.toByteArray()
                     uri.host == "auth.example" && uri.path == "/" -> payload(1).toByteArray()
                     uri.host == "auth.example" && uri.path == "/key" -> { assertEquals("fixture-header", headers.scopedAuthFor(url)); key }
                     uri.path == "/manifest.ts" -> "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000\nmedia.m3u8".toByteArray()

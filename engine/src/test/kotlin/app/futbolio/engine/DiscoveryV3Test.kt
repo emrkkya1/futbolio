@@ -32,9 +32,9 @@ class DiscoveryV3Test {
         val entries = MatchNormalizer.aggregate(rows, emptyList(), PresentationConfig(), now)
         assertEquals(1, entries.size); assertEquals(2, entries[0].listings.size); assertEquals("Manchester United vs Chelsea", entries[0].title)
     }
-    @Test fun doesNotMergeYouthOrReverseFixtures() {
+    @Test fun reversedListingsShareStreamsButYouthTeamsRemainSeparate() {
         val entries = MatchNormalizer.aggregate(listOf(row(title = "Arsenal - Chelsea"), row(s.copy(id = "b"), "Arsenal U19 - Chelsea U19"), row(s.copy(id = "c"), "Chelsea - Arsenal")), emptyList(), PresentationConfig(), now)
-        assertEquals(3, entries.size)
+        assertEquals(2, entries.size)
     }
     @Test fun doesNotMergeDifferentDays() { assertEquals(2, MatchNormalizer.aggregate(listOf(row(), row(s.copy(id = "b"), start = now + 24 * 3_600_000)), emptyList(), PresentationConfig(), now).size) }
     @Test fun unknownKickoffRemainsSeparate() { assertEquals(2, MatchNormalizer.aggregate(listOf(row(start = 0), row(s.copy(id = "b"), start = 0)), emptyList(), PresentationConfig(), now).size) }

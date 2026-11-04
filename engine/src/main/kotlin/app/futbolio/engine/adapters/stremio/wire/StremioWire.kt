@@ -78,8 +78,8 @@ internal class StremioWire(private val host: HostConfig) {
             ?.let { "$it (${preferences.displayTimeZone}, UTC${date.offset.id.takeUnless { offset -> offset == "Z" } ?: "+00:00"})" }
             ?: "To be confirmed"
         val providers = "${row.sources.size} ${if (row.sources.size == 1) "provider" else "providers"} · ${row.sources.joinToString(", ")}"
-        put("description", if (row.channel) "$title\n24/7 sports channel\nAvailable from $providers\nSelect a source to watch. Website options open in your browser."
-            else "${row.league.name}\nKickoff: $fullKickoff\nStatus: $state${if (verified) " · verified fixture data" else " · kickoff-based estimate"}\nAvailable from $providers${if (row.needsFixtureLookup) "\nProvider schedules differ; kickoff verification is pending." else ""}\nSelect a source to watch. Website options open in your browser.")
+        put("description", if (row.channel) "$title\n24/7 sports channel\nListed by $providers\nSelect an available stream to watch."
+            else "${row.league.name}\nKickoff: $fullKickoff\nStatus: $state${if (verified) " · verified fixture data" else " · kickoff-based estimate"}\nListed by $providers${if (row.needsFixtureLookup) "\nProvider schedules differ; kickoff verification is pending." else ""}\nSelect an available stream to watch.")
         put("genres", JsonArray(listOf(JsonPrimitive(row.league.name))))
         put("links", metaLinks(row))
         put("releaseInfo", if (row.channel) "24/7 channel" else "$state · $kickoff")

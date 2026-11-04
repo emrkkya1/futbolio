@@ -22,10 +22,51 @@ class MatchPolicyTest {
         assertEquals("Manchester United vs Chelsea", entries.single().title)
     }
 
-    @Test fun reversedYouthAndWomensFixturesStaySeparate() {
+    @Test fun reversedListingsMergeButDistinctYouthAndWomensTeamsStaySeparate() {
         val rows = listOf(row(title = "Arsenal - Chelsea"), row("youth", "Arsenal U19 - Chelsea U19"),
             row("reverse", "Chelsea - Arsenal"), row("women", "Arsenal Women - Chelsea Women"))
-        assertEquals(4, MatchNormalizer.aggregate(rows, emptyList(), options, now).size)
+        assertEquals(3, MatchNormalizer.aggregate(rows, emptyList(), options, now).size)
+    }
+
+    @Test fun oneSharedTeamAtTheSameMinuteIsSufficientAndTransitive() {
+        val a = row("a", "Home A vs Away A")
+        val b = row("b", "Home B vs Away B")
+        val bridge = row("c", "Away A vs Home B", now + 30_000)
+        for (rows in listOf(listOf(a, b, bridge), listOf(bridge, b, a), listOf(b, bridge, a))) {
+            val entry = MatchNormalizer.aggregate(rows, emptyList(), options, now).single()
+            assertEquals(3, entry.listings.size)
+            assertFalse(entry.ambiguous)
+        }
+        assertEquals(2, MatchNormalizer.aggregate(listOf(a, row("other", "Home A vs Different", now + 60_000)), emptyList(), options, now).size)
+        assertEquals(2, MatchNormalizer.aggregate(listOf(a.copy(starts = 0), bridge.copy(starts = 0)), emptyList(), options, now).size)
+    }
+
+    @Test fun championsLeagueAliasesKeepAllProviderSourcesTogether() {
+        val titles = listOf("PSV Eindhoven vs Club Brugge", "PSV - Club Brugge", "PSV Eindhoven vs Brujas")
+        val entries = MatchNormalizer.aggregate(titles.mapIndexed { i, title -> row("source-$i", title) }, emptyList(), options, now)
+        assertEquals(1, entries.size)
+        assertEquals(3, entries.single().listings.size)
+        val city = listOf("RB Leipzig vs Manchester City", "Leipzig - Man City")
+        assertEquals(1, MatchNormalizer.aggregate(city.mapIndexed { i, title -> row("source-$i", title) }, emptyList(), options, now).size)
+    }
+
+    @Test fun afterTurkishMidnightClockOnlySourcesJoinAnExplicitStillLiveFixture() {
+        val kickoff = Instant.parse("2026-11-04T20:00:00Z").toEpochMilli()
+        val observed = Instant.parse("2026-11-04T21:30:00Z").toEpochMilli()
+        val dated = row("dated", "PSV Eindhoven vs Club Brugge", kickoff).copy(league = "UEFA Champions League")
+        val clockOnly = row("clock", "PSV - Club Brugge", 0).copy(timeLabel = "23:00", observedAt = observed, league = "UEFA Şampiyonlar Ligi Lig Aşaması")
+        for (rows in listOf(listOf(dated, clockOnly), listOf(clockOnly, dated))) {
+            val entry = MatchNormalizer.aggregate(rows, emptyList(), options, observed).single()
+            assertEquals(kickoff, entry.starts)
+            assertEquals(2, entry.listings.size)
+            assertTrue(CatalogVisibility.visible(entry, observed))
+        }
+        // No independent date evidence: don't resurrect yesterday just because its clock is closer.
+        val alone = MatchNormalizer.aggregate(listOf(clockOnly), emptyList(), options, observed).single()
+        assertEquals(kickoff + 24 * CatalogVisibility.HOUR, alone.starts)
+        assertEquals(2, MatchNormalizer.aggregate(listOf(dated, clockOnly.copy(starts = kickoff + 24 * CatalogVisibility.HOUR)), emptyList(), options, observed).size)
+        val tomorrow = observed + 24 * CatalogVisibility.HOUR
+        assertEquals(2, MatchNormalizer.aggregate(listOf(dated, clockOnly.copy(observedAt = tomorrow)), emptyList(), options.copy(hideFinished = false), tomorrow).size)
     }
 
     @Test fun differentDaysAndUnknownKickoffsStaySeparate() {

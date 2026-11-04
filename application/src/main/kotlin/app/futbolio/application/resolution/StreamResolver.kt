@@ -1,6 +1,7 @@
 package app.futbolio.application.resolution
 
 import app.futbolio.application.api.ResourceLimits
+import app.futbolio.application.api.Failures
 import app.futbolio.application.ports.*
 import app.futbolio.domain.catalog.Listing
 import kotlinx.coroutines.*
@@ -14,6 +15,7 @@ class StreamResolver(
     private val providers: ProviderDirectory,
     private val time: TimeSource = TimeSource.System,
     private val limits: ResourceLimits = ResourceLimits(),
+    private val events: EventSink = EventSink {},
 ) {
     private data class Cached(val choices: List<StreamChoice>, val until: Long)
     private val cache = LinkedHashMap<String, Cached>(32, .75f, true)
@@ -34,7 +36,8 @@ class StreamResolver(
                 val epoch = generation
                 scope.async(start = CoroutineStart.LAZY) {
                     try {
-                        val choices = withTimeoutOrNull(limits.resolutionTimeoutMillis) { permits.withPermit { load(item) } } ?: listOf(fallback)
+                        val choices = withTimeoutOrNull(limits.resolutionTimeoutMillis) { permits.withPermit { load(item) } }
+                            ?: listOf(fallback).also { events.event("Resolution ${item.source.id}: deadline reached") }
                         synchronized(this@StreamResolver) {
                             if (epoch == generation) {
                                 cache[item.id] = Cached(choices, time.monotonicMillis() + limits.resolutionCacheMillis)
@@ -52,7 +55,8 @@ class StreamResolver(
     private suspend fun load(item: Listing): List<StreamChoice> {
         val choices = try { providers.get(item.source.kind).resolve(item, net) }
         catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { emptyList() }
+        catch (failure: Exception) { events.event("Resolution ${item.source.id}: ${Failures.describe(failure)}"); emptyList() }
+        events.event("Resolution ${item.source.id}: ${choices.count { it.url.isNotBlank() }} media choices")
         return deduplicateStreams(choices.filter { it.url.isNotBlank() }).take(12) +
             StreamChoice("Open website (external browser, not in-player)", externalUrl = item.page)
     }

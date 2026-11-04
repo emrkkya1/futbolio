@@ -23,13 +23,20 @@ internal object TaraftariumProvider : Provider {
         val api = source.apiUrl.ifBlank { runCatching { Web.resolve(Base64.getDecoder().decode(encoded).toString(Charsets.UTF_8), "/matches.php") }.getOrDefault("") }
         if (api.isNotBlank()) try {
             val rows = codec.parseToJsonElement(net.text(api, SourceHeaders(home.url)).text) as? JsonArray ?: error("Invalid matches")
-            for (value in rows.take(600)) {
-                val row = value.obj()
-                if (row.s("type") != "football") continue
+            val matches = rows.take(600).map { it.obj() }.filter { it.s("type") == "football" }
+            fun matchKey(row: JsonObject) = Triple(row.s("HomeTeam"), row.s("AwayTeam"), row.s("Time"))
+            fun competition(row: JsonObject) = Text.plain(row.s("league")).substringBefore(" | ").trim()
+            fun restriction(league: String) = Text.norm(league).startsWith("sadece turkiye")
+            val competitions = matches.filterNot { restriction(competition(it)) }.groupBy(::matchKey)
+                .mapValues { (_, variants) -> variants.map(::competition).filter(String::isNotBlank).distinct().singleOrNull() }
+            for (row in matches) {
                 runCatching {
                     val id = Web.query(Web.resolve(api, row.s("URL")), "id")
                     if (id.isBlank()) return@runCatching
-                    out += Listing(source, "${Text.plain(row.s("HomeTeam"))} - ${Text.plain(row.s("AwayTeam"))}", Text.plain(row.s("league")).ifBlank { "Football" },
+                    // Some alternate rows put a region/quality note in the league field.
+                    // It is not a conflicting competition and must not hide the whole match.
+                    val league = competition(row).let { if (restriction(it)) competitions[matchKey(row)].orEmpty() else it }
+                    out += Listing(source, "${Text.plain(row.s("HomeTeam"))} - ${Text.plain(row.s("AwayTeam"))}", league.ifBlank { "Football" },
                         Web.resolve(home.url, "/channel.html?id=${Web.enc(id)}"), timeLabel = row.s("Time"), identityTitle = "${row.s("HomeTeam")} - ${row.s("AwayTeam")}")
                 }
             }

@@ -11,8 +11,19 @@ plugins {
     alias(libs.plugins.compose) apply false
     alias(libs.plugins.android.application) apply false
 }
-allprojects { group = "app.futbolio"; version = "0.3.0" }
+allprojects { group = "app.futbolio"; version = providers.gradleProperty("futbolioVersion").get() }
 subprojects { dependencyLocking { lockAllConfigurations() } }
+
+val prepareOfflineTestDependencies by tasks.registering {
+    group = "verification"
+    description = "Compile and download all core test runtime artifacts before network isolation."
+    dependsOn(":domain:testClasses", ":application:testClasses", ":engine:testClasses")
+    doLast {
+        listOf(":domain", ":application", ":engine").forEach { module ->
+            rootProject.project(module).configurations.getByName("testRuntimeClasspath").resolve()
+        }
+    }
+}
 
 val verifyModuleDependencies by tasks.registering {
     group = "verification"

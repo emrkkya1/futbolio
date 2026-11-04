@@ -2,6 +2,11 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 plugins { alias(libs.plugins.kotlin.jvm); alias(libs.plugins.kotlin.serialization); alias(libs.plugins.kotlin.compose); alias(libs.plugins.compose) }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 java { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+// Host selectors/native binaries differ by OS. Their versions are still selected
+// by the pinned Compose plugin and locked skiko-awt dependency, not floating here.
+dependencyLocking {
+    ignoredDependencies.addAll(listOf("org.jetbrains.compose.desktop:desktop-jvm-*", "org.jetbrains.skiko:skiko-awt-runtime-*"))
+}
 dependencies {
     implementation(project(":engine"))
     implementation(compose.desktop.currentOs)
@@ -21,7 +26,7 @@ compose.desktop { application {
         providers.gradleProperty("futbolio.packageOutput").orNull?.let { outputBaseDir.set(project.file(it)) }
         targetFormats(TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Rpm)
         packageName = "Futbolio"
-        packageVersion = "0.3.0"
+        packageVersion = project.version.toString()
         modules("java.net.http", "java.desktop", "jdk.unsupported")
         windows {
             iconFile.set(project.file("icons/futbolio.ico"))

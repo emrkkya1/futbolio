@@ -1,0 +1,6 @@
+[
+  {"HomeTeam":"PSV","AwayTeam":"Club Brugge","HomeLogo":"https://images.example/psv.png","AwayLogo":"https://images.example/clubbrugge.png","Time":"23:00","URL":"/ch.html?id=ex5","type":"football","league":"UEFA Şampiyonlar Ligi"},
+  {"HomeTeam":"PSV","AwayTeam":"Club Brugge","HomeLogo":"https://images.example/psv.png","AwayLogo":"https://images.example/clubbrugge.png","Time":"23:00","URL":"/ch.html?id=https://cdn.example/master.m3u8","type":"football","league":"Sadece Türkiye'den izlenebilir | FHD"},
+  {"HomeTeam":"Leipzig","AwayTeam":"Manchester City","HomeLogo":"https://images.example/leipzig.png","AwayLogo":"https://images.example/manchestercity.png","Time":"23:00","URL":"/ch.html?id=ex7","type":"football","league":"UEFA Şampiyonlar Ligi"},
+  {"HomeTeam":"Leipzig","AwayTeam":"Manchester City","HomeLogo":"https://images.example/leipzig.png","AwayLogo":"https://images.example/manchestercity.png","Time":"23:00","URL":"/ch.html?id=https://cdn.example/master.m3u8","type":"football","league":"Sadece Türkiye'den izlenebilir | FHD"}
+]

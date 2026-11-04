@@ -1,0 +1,4 @@
+{"events":[
+  {"id":42258,"time":"15:00:00","title":"UEFA Champions League: PSV Eindhoven vs Brujas","date":"2026-11-04","sport":"futbol","flag":"https://images.example/champions-league.png","embeds":[{"name":"ESPN4","lang":"Español","iframe":"https://player.example/1"},{"name":"Disney+","lang":"Español","iframe":"https://player.example/2"},{"name":"ESPN4 Movil","lang":"Español","iframe":"https://player.example/3"}]},
+  {"id":42269,"time":"15:00:00","title":"UEFA Champions League: RB Leipzig vs Manchester City","date":"2026-11-04","sport":"futbol","flag":"https://images.example/champions-league.png","embeds":[{"name":"TNT 2 UK","lang":"Inglés","iframe":"https://player.example/1"},{"name":"ESPN","lang":"Español","iframe":"https://player.example/2"},{"name":"Disney+","lang":"Español","iframe":"https://player.example/3"},{"name":"ESPN Movil","lang":"Español","iframe":"https://player.example/4"}]}
+]}

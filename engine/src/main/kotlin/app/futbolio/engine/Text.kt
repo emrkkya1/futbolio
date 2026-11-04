@@ -54,8 +54,16 @@ fun JsonObject.a(key: String) = (get(key) as? JsonArray)?.toList().orEmpty()
 
 /** Restricted JS literal reader: arrays, objects and scalar data only. Never evals code. */
 class LiteralReader(private val text: String, private var i: Int = 0) {
+    internal val position: Int get() = i
     private var nodes = 0
-    private fun ws() { while (i < text.length && text[i].isWhitespace()) i++ }
+    private fun ws() {
+        while (i < text.length) when {
+            text[i].isWhitespace() -> i++
+            text.startsWith("//", i) -> i = text.indexOf('\n', i + 2).takeIf { it >= 0 } ?: text.length
+            text.startsWith("/*", i) -> i = text.indexOf("*/", i + 2).takeIf { it >= 0 }?.plus(2) ?: bad()
+            else -> return
+        }
+    }
     private fun bad(): Nothing = throw IllegalArgumentException("Unsupported data literal")
     fun read(depth: Int = 0): JsonElement {
         if (depth > 40 || ++nodes > 100_000) bad()

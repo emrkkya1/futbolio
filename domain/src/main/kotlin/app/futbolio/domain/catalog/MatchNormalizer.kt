@@ -15,12 +15,14 @@ object MatchNormalizer {
     private val atHome = Regex("\\s+at\\s+", RegexOption.IGNORE_CASE)
     private val clock = Regex("(?:^|\\s)([0-2]\\d:[0-5]\\d)(?:$|\\s)")
     private val clubDecorations = setOf("fc", "cf", "sk", "jk")
+    private val regionalAliases = mapOf("psv" to "PSV Eindhoven", "brujas" to "Club Brugge", "club brujas" to "Club Brugge",
+        "leipzig" to "RB Leipzig", "porto" to "FC Porto", "oporto" to "FC Porto", "slavia prag" to "Slavia Prague", "slavia praga" to "Slavia Prague")
     private val genericCompetitions = setOf("", "football", "soccer", "futbol", "futebol", "matches")
 
     fun teamName(name: String, config: PresentationConfig): String {
         val clean = name.replace(liveSuffix, " ").trim()
         return config.teamAliases.entries.firstOrNull { Leagues.key(it.key) == Leagues.key(clean) }?.value
-            ?: builtInAliases[Leagues.key(clean)] ?: clean
+            ?: builtInAliases[Leagues.key(clean)] ?: regionalAliases[Leagues.key(clean)] ?: clean
     }
 
     fun teamKey(name: String, config: PresentationConfig) = Leagues.key(teamName(name, config))
@@ -61,7 +63,7 @@ object MatchNormalizer {
             val homeKey: String, val awayKey: String, val titleKey: String, val rowId: String, val ambiguousFixture: Boolean)
         val teamKeys = mutableMapOf<String, String>()
         fun key(name: String) = teamKeys.getOrPut(name) { teamKey(name, config) }
-        val parsed = rows.map { row ->
+        val initial = rows.map { row ->
             val teams = if (row.channel) null else teams(row.title, config)
             val league = Leagues.find(row.league, config.leagueAliases)
             val start = kickoff(row, now)
@@ -74,21 +76,47 @@ object MatchNormalizer {
             }
             Parsed(row, teams, league, start, candidates.singleOrNull()?.fixture, homeKey, awayKey, Leagues.key(row.title), row.id, candidates.size > 1)
         }
-        val groups = mutableListOf<MutableList<Parsed>>()
+        // Clock-only schedules can retain tonight's matches after local midnight. Re-anchor
+        // only with independent, explicitly dated evidence for the same still-live fixture.
+        // Without that evidence kickoff() keeps its conservative observation-date policy.
+        val dated = initial.filter { !it.row.channel && it.row.starts > 0 && it.teams != null &&
+            it.start <= now && now < it.start + (if (it.league.tournament) 3 else 2) * CatalogVisibility.HOUR }
+            .flatMap { item -> listOf(item.homeKey to item, item.awayKey to item) }.groupBy({ it.first }, { it.second })
+        val parsed = initial.map { item ->
+            if (item.row.channel || item.row.starts > 0 || item.start <= now || item.teams == null) item else {
+                val zone = ZoneId.of(item.row.source.timeZone)
+                val previous = Instant.ofEpochMilli(item.start).atZone(zone).minusDays(1).toInstant().toEpochMilli()
+                val anchors = (dated[item.homeKey].orEmpty() + dated[item.awayKey].orEmpty()).filter {
+                    (it.league.id == item.league.id || Leagues.key(item.league.name) in genericCompetitions) &&
+                        (it.start / 60_000 == previous / 60_000 || it.homeKey == item.homeKey && it.awayKey == item.awayKey &&
+                            kotlin.math.abs(it.start - previous) <= 45 * 60_000)
+                }.map { it.start }.distinct()
+                anchors.singleOrNull()?.let { item.copy(start = previous) } ?: item
+            }
+        }
+        fun sameTeamAndTime(a: Parsed, b: Parsed): Boolean = a.teams != null && b.teams != null &&
+            a.start > 0 && b.start > 0 && a.start / 60_000 == b.start / 60_000 &&
+            (a.homeKey == b.homeKey || a.homeKey == b.awayKey || a.awayKey == b.homeKey || a.awayKey == b.awayKey)
+        val parents = IntArray(parsed.size) { it }
+        fun root(index: Int): Int {
+            var current = index
+            while (parents[current] != current) { parents[current] = parents[parents[current]]; current = parents[current] }
+            return current
+        }
         val byTeam = mutableMapOf<String, MutableSet<Int>>()
         val byChannel = mutableMapOf<String, Int>()
         val byFixture = mutableMapOf<Pair<String, String>, MutableSet<Int>>()
         val uncertainRows = mutableSetOf<String>()
-        for (item in parsed) {
+        for ((index, item) in parsed.withIndex()) {
             val channelKey = "${item.titleKey}|${item.row.source.timeZone}"
             val candidates = if (item.row.channel) listOfNotNull(byChannel[channelKey]) else
                 (byTeam[item.homeKey].orEmpty() + byTeam[item.awayKey].orEmpty() +
                     item.fixture?.let { byFixture[it.league.id to it.id].orEmpty() }.orEmpty()).toList()
-            val matches = candidates.filter { index ->
-                val members = groups[index]
-                val first = members[0]
+            val matches = candidates.filter { candidate ->
+                val first = parsed[candidate]
                 when {
                     item.row.channel || first.row.channel -> item.row.channel && first.row.channel && item.titleKey == first.titleKey && item.row.source.timeZone == first.row.source.timeZone
+                    sameTeamAndTime(item, first) -> true
                     item.fixture != null && first.fixture != null -> item.fixture.id == first.fixture.id && item.fixture.league.id == first.fixture.league.id
                     item.teams == null || first.teams == null || item.start == 0L || first.start == 0L -> item.rowId == first.rowId
                     else -> {
@@ -103,20 +131,24 @@ object MatchNormalizer {
                     }
                 }
             }
-            // More than one candidate means no safe local decision. Do not bridge separate fixtures.
-            if (matches.size > 1) {
+            val strict = matches.filter { sameTeamAndTime(item, parsed[it]) }.map(::root).distinct()
+            val roots = matches.map(::root).distinct()
+            // The explicit team+time rule is transitive, including a listing bridging two groups.
+            // Keep ambiguity handling for looser, conflicting schedule estimates only.
+            val join = if (strict.isNotEmpty()) strict else roots.takeIf { it.size == 1 }.orEmpty()
+            if (strict.isEmpty() && roots.size > 1) {
                 uncertainRows += item.rowId
-                matches.forEach { index -> uncertainRows += groups[index].map { it.rowId } }
+                parsed.indices.filter { root(it) in roots }.forEach { uncertainRows += parsed[it].rowId }
             }
-            val index = matches.singleOrNull() ?: groups.size.also { groups.add(mutableListOf()) }
-            groups[index] += item
+            join.forEach { parents[root(it)] = index }
             item.fixture?.let { byFixture.getOrPut(it.league.id to it.id) { linkedSetOf() } += index }
             if (item.row.channel) byChannel[channelKey] = index else {
                 if (item.homeKey.isNotEmpty()) byTeam.getOrPut(item.homeKey) { linkedSetOf() } += index
                 if (item.awayKey.isNotEmpty()) byTeam.getOrPut(item.awayKey) { linkedSetOf() } += index
             }
         }
-        return groups.map { group ->
+        return parsed.indices.groupBy(::root).values.map { indices ->
+            val group = indices.map { parsed[it] }
             // Prefer an explicit timestamp over a clock-only listing; use the most-supported
             // timestamp, then the later one, as provisional metadata until a conflict is resolved.
             val first = group.sortedWith(compareByDescending<Parsed> { Leagues.allowed(it.league) }

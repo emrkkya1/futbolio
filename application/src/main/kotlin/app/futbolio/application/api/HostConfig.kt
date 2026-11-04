@@ -16,5 +16,3 @@ data class HostConfig(
     val manifest get() = "$base/manifest.json"
     override fun toString() = "HostConfig(port=$port, desktop=$desktop, accessToken=[redacted])"
 }
-
-object Product { const val VERSION = "0.3.0" }
