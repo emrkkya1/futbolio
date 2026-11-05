@@ -4,6 +4,16 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
+## 0.4.1
+
+### Changed
+- Darken the primary green from `#4FA14C` to `#3A8638` so white button text meets
+  the 4.5:1 body-text contrast target, also applied to the launcher icon.
+- Restyle square posters to the brand palette: dimmed bundled stadium backdrop,
+  bundled Manrope typography, a verified-live green pill, lavender secondary
+  labels, and the green diamond mark with a transparent F cutout. Poster URLs
+  advance to v=8 so Stremio refetches restyled artwork.
+
 ## 0.4.0
 
 ### Added

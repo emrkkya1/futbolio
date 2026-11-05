@@ -21,6 +21,7 @@ class RelayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        posters.loadFonts(this)
         owner = container.host.claimOwner()
         wake = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Futbolio:streaming").apply { setReferenceCounted(false) }
     }

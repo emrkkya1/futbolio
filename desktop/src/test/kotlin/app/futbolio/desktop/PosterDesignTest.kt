@@ -49,8 +49,9 @@ class PosterDesignTest {
         val bytes = DesktopPosters().renderMatch(model())
         val image = ImageIO.read(bytes.inputStream())
         assertEquals(640, image.width); assertEquals(640, image.height)
-        assertTrue(Color(image.getRGB(50, 570)).red > 230)
-        assertTrue(Color(image.getRGB(60, 565)).red < 100, "The F must be cut out, not painted on the white mark")
+        val diamond = image.getRGB(50, 570)
+        assertTrue(Color(diamond).red < 120 && Color(diamond).green > 100, "The brand mark is the green diamond")
+        assertTrue(Color(image.getRGB(60, 565)).red < 100, "The F must be cut out, not painted on the green mark")
         assertTrue(bytes.size < 100_000, "Posters should stay below 100 kB for fast browsing")
         println("Square match poster JPEG: ${bytes.size} bytes")
         val directory = Path.of(System.getProperty("java.io.tmpdir"), "opencode")
@@ -62,7 +63,8 @@ class PosterDesignTest {
         val image = ImageIO.read(DesktopPosters().renderMatch(model().copy(homeLogo = byteArrayOf(1, 2, 3), awayLogo = null,
             home = "An Extremely Long Club Name With More Words Than A Poster Can Display", competitionLogo = null)).inputStream())
         assertEquals(640, image.height)
-        assertTrue(Color(image.getRGB(50, 570)).red > 230)
+        val diamond = image.getRGB(50, 570)
+        assertTrue(Color(diamond).red < 120 && Color(diamond).green > 100)
         assertTrue(Color(image.getRGB(60, 565)).red < 100)
     }
 

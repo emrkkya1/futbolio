@@ -77,7 +77,7 @@ internal class StremioWire(private val host: HostConfig) {
         // Minute ticks update descriptions but must not invalidate a whole screen of posters.
         val scoreVersion = if (score.isNotBlank() || minute.isNotBlank()) "&match=${Web.enc("$score|${row.state(now).name}")}" else ""
         val displayVersion = if (preferences.showTimesAndScores) "" else "&details=off"
-        put("poster", "${host.base}/poster/${Web.enc(row.id)}.jpg?v=7$scoreVersion$displayVersion")
+        put("poster", "${host.base}/poster/${Web.enc(row.id)}.jpg?v=8$scoreVersion$displayVersion")
         val verified = row.fixture?.let { it.fresh(now) || it.state in listOf(MatchState.FINISHED, MatchState.CANCELLED) } == true
         val date = if (row.starts > 0) Instant.ofEpochMilli(row.starts).atZone(ZoneId.of(preferences.displayTimeZone)) else null
         val fullKickoff = date?.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy · HH:mm", Locale.UK))
