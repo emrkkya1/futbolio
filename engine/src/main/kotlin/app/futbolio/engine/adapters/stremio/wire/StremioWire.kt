@@ -71,12 +71,13 @@ internal class StremioWire(private val host: HostConfig) {
         val home = row.home; val away = row.away
         val matchTitle = if (!row.channel && home != null && away != null) "${home.name} vs ${away.name}" else row.title
         val title = if (!row.channel && row.state(now) == MatchState.HALFTIME) "HT | $matchTitle" else matchTitle
-        val score = row.fixture?.scoreText(now).orEmpty()
-        val minute = row.fixture?.clockText(now).orEmpty()
+        val score = if (preferences.showTimesAndScores) row.fixture?.scoreText(now).orEmpty() else ""
+        val minute = if (preferences.showTimesAndScores) row.fixture?.clockText(now).orEmpty() else ""
         put("id", row.id); put("type", "tv"); put("name", title); put("posterShape", "square")
         // Minute ticks update descriptions but must not invalidate a whole screen of posters.
         val scoreVersion = if (score.isNotBlank() || minute.isNotBlank()) "&match=${Web.enc("$score|${row.state(now).name}")}" else ""
-        put("poster", "${host.base}/poster/${Web.enc(row.id)}.jpg?v=7$scoreVersion")
+        val displayVersion = if (preferences.showTimesAndScores) "" else "&details=off"
+        put("poster", "${host.base}/poster/${Web.enc(row.id)}.jpg?v=7$scoreVersion$displayVersion")
         val verified = row.fixture?.let { it.fresh(now) || it.state in listOf(MatchState.FINISHED, MatchState.CANCELLED) } == true
         val date = if (row.starts > 0) Instant.ofEpochMilli(row.starts).atZone(ZoneId.of(preferences.displayTimeZone)) else null
         val fullKickoff = date?.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy · HH:mm", Locale.UK))

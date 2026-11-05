@@ -14,6 +14,13 @@ network requests.
 
 ## Display behavior
 
+**Settings → Times and Scores** controls live score and clock display on Android/TV.
+It defaults to **On** and is persisted as `presentation.showTimesAndScores`.
+Turning it off hides scores/minutes in descriptions and poster models, and changes
+poster URLs so Stremio can fetch the new artwork. Kickoff times, verified match
+status, halftime labels, and finished-match filtering remain active. This is a
+display preference, not a switch for ESPN requests or fixture enrichment.
+
 - **Live:** score replaces `VS` between the crests on square thumbnails; the
   minute appears at the bottom right, e.g. `47'` or `90+4'`.
 - **Halftime:** the returned title begins `HT | `, the score remains visible,

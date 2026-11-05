@@ -10,6 +10,8 @@ data class PresentationConfig(
     val scoresEnabled: Boolean = false,
     val teamAliases: Map<String, String> = emptyMap(),
     val leagueAliases: Map<String, String> = emptyMap(),
+    /** Display live score and match-clock text without changing fixture/status enrichment. */
+    val showTimesAndScores: Boolean = true,
 ) {
     fun validate() {
         ZoneId.of(displayTimeZone)

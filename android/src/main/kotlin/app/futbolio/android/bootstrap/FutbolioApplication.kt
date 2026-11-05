@@ -81,7 +81,7 @@ class AndroidContainer(context: Context) : AndroidSession {
     override suspend fun removeSource(id: String) = save { coordinator.update { it.copy(sources = it.sources.filterNot { source -> source.id == id }) } }
     override suspend fun savePresentation(options: PresentationConfig) = save { coordinator.update {
         it.copy(presentation = it.presentation.copy(displayTimeZone = options.displayTimeZone, scoresEnabled = options.scoresEnabled,
-            hideFinished = options.hideFinished, showHalftime = options.showHalftime))
+            hideFinished = options.hideFinished, showHalftime = options.showHalftime, showTimesAndScores = options.showTimesAndScores))
     } }
     override suspend fun restoreDefaults() = save { coordinator.update { Configurations.defaults() } }
     override suspend fun importText(text: String) = save { val imported = Configurations.import(text); coordinator.update { imported } }

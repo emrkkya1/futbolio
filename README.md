@@ -11,14 +11,16 @@ The published release is for **Android / Android TV 8.0 or newer**. Install Futb
 1. Open the [latest release](https://github.com/emrkkya1/futbolio/releases/latest) and expand **Assets** if needed.
 2. Download **`futbolio-vX.X.X.apk`**. Choose the APK, not the source-code ZIP or TAR files.
 3. Open the APK on your Android device and select **Install**. On a TV, transfer the file to the TV first and open it with a file manager. If Android asks, allow that browser or file manager to **install unknown apps**; you can turn this permission off afterward.
-4. Open Futbolio and select **Start Futbolio**, then **Install / open Stremio**. Confirm the add-on installation in Stremio if prompted.
+4. Open Futbolio, select **Start Futbolio**, then **How to Install** and **Copy URL**. On TV, open Stremio, go to Add-ons, press **Add Addon**, and paste the URL. On mobile, add the URL through **web.stremio.com** in your mobile browser, signed in to the same account as the Stremio mobile app.
 5. In Stremio, browse Futbolio's catalogs, choose a match or channel, and select an available source. **Leave Futbolio running while you watch.**
 
-To update, download the newer release APK and install it over the existing app.
+Futbolio checks this repository's latest stable GitHub release when opened (at most once every 30 minutes while the app process stays alive). A newer compatible release shows a toast and an update prompt. Choose **Download and install** to download the APK and open Android's installer. The first time, Android may ask you to allow Futbolio to **install unknown apps**; installation always needs your confirmation. Your settings are kept.
 
-### If Stremio does not open or install the add-on
+Use **Settings → Check for updates** to check manually. Release checks require internet access; an offline or failed automatic check does not interrupt the app. The updater verifies the APK's SHA-256 checksum, package, version, and signing key before offering installation. Updates must use the same signing key as your installed app, so local debug builds cannot update to production-signed releases this way. You can also download a newer release APK manually and install it over an existing, compatibly signed installation.
 
-Check that Stremio is installed and Futbolio is running. Some Stremio TV versions do not support add-on installation links or manual URLs. If your version accepts a manifest URL, use **Copy URL** in Futbolio:
+### If the add-on does not install
+
+Check that Stremio is installed and Futbolio is running. Use **Copy URL** under **How to Install** in Futbolio to copy the manifest URL:
 
 ```text
 http://127.0.0.1:7000/manifest.json

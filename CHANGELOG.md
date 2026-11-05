@@ -4,6 +4,33 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
+## 0.4.0
+
+### Added
+- Check stable GitHub releases when opening the Android app, with an update
+  toast, a persistent green update arrow, and a download/install action.
+  Downloads verify GitHub's SHA-256 digest, package, version, and signing key;
+  Android permission and installation confirmation remain required.
+- Persisted Times and Scores On/Off control for live score/clock display in
+  Stremio descriptions and posters, without changing kickoff times, fixture
+  enrichment, or finished-match filtering.
+- Bundled Kodchasan and Manrope fonts and filled Material Design Icons, with
+  their license notices included.
+
+### Changed
+- Redesign Android TV around relay controls on the left and stream sources on
+  the right; mobile uses a compact header and independently scrolling source
+  list with a visible scrollbar and fixed bottom actions.
+- Use a flat dark-gray background, green primary actions, restrained lavender
+  accents, softened diamond/pointed buttons, and TV focus outlines.
+- Simplify provider popups to availability, event count, and stream-fetch status,
+  with Test Provider and Close actions instead of cards, URLs, and report search.
+- Unify popup action sizing, add Close icons, and provide compact, device-specific
+  Stremio installation instructions with a full-width Copy URL action.
+- Simplify Android Settings to Diagnostics, Check for updates, and Times and Scores.
+- Replace the Android launcher icon's solid backdrop with a green diamond and
+  transparent F cutout; launchers may still apply their own icon treatment.
+
 ## 0.3.3
 
 ### Added
