@@ -47,7 +47,7 @@ class SmokeInstrumentation : Instrumentation() {
             check("Foreground service starts shared API", ready())
             val base = "http://127.0.0.1:7000"
             val manifest = get("$base/manifest.json")
-            check("All three catalogs", manifest.contains("Turkish Football") && manifest.contains("All Football") && manifest.contains("Sports Channels"))
+            check("All three catalogs", manifest.contains("Turkish Football") && manifest.contains("All Matches") && manifest.contains("Sports Channels"))
             check("Empty provider configuration", get("$base/health.json").contains("\"sources\": []"))
             check("Unknown catalog handled", get("$base/catalog/tv/unknown.json").contains("[]"))
             check("Unknown metadata", get("$base/meta/tv/unknown.json").contains("null"))

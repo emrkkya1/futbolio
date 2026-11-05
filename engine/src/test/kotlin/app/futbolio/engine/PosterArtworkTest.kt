@@ -37,7 +37,7 @@ class PosterArtworkTest {
         val meta = StremioWire(HostConfig()).meta(entry, PresentationConfig(), now)
         assertEquals("Arsenal vs Chelsea", meta.s("name"))
         assertEquals("square", meta.s("posterShape"))
-        assertTrue(meta.s("poster").contains("?v=7"))
+        assertTrue(meta.s("poster").contains("?v=8"))
         assertTrue(meta.s("description").contains("Kickoff:"))
         assertTrue(meta.s("description").contains("kickoff-based estimate"))
         assertTrue(meta.s("description").contains("1 provider"))

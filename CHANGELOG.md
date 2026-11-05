@@ -4,7 +4,7 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
-## 0.4.0
+## 0.4.1
 
 ### Added
 - Check stable GitHub releases when opening the Android app, with an update
@@ -23,6 +23,10 @@ derived from that version using fixed-width numeric positions.
   list with a visible scrollbar and fixed bottom actions.
 - Use a flat dark-gray background, green primary actions, restrained lavender
   accents, softened diamond/pointed buttons, and TV focus outlines.
+- Restyle square posters to the brand palette: dimmed bundled stadium backdrop,
+  bundled Manrope typography, a verified-live green pill, lavender secondary
+  labels, and the green diamond mark with a transparent F cutout. Poster URLs
+  advance to v=8 so Stremio refetches restyled artwork.
 - Simplify provider popups to availability, event count, and stream-fetch status,
   with Test Provider and Close actions instead of cards, URLs, and report search.
 - Unify popup action sizing, add Close icons, and provide compact, device-specific
