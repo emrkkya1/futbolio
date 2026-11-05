@@ -50,7 +50,7 @@ Playback depends on the source, Stremio, and your device's codec support. Full-m
 
 ## Desktop
 
-A desktop app is available from source; **desktop installers are not currently published in releases**. It can serve Stremio on the same computer or trusted devices on a private network. Never expose its port publicly or share its token-bearing URL outside that network.
+**Windows and Linux applications are on the roadmap.** Desktop installers are not currently published in releases, but a desktop app can already be built from source. It can serve Stremio on the same computer or trusted devices on a private network. Never expose its port publicly or share its token-bearing URL outside that network.
 
 [Changelog](CHANGELOG.md) · [Score enrichment](docs/SCORE-ENRICHMENT.md)
 
