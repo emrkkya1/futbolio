@@ -4,13 +4,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <queries>
         <package android:name="com.stremio.one" />
         <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="stremio" /></intent>
     </queries>
-    <application android:name=".bootstrap.FutbolioApplication" android:label="Futbolio" android:icon="@mipmap/ic_futbolio" android:roundIcon="@mipmap/ic_futbolio" android:banner="@drawable/tv_banner"
+    <application android:name=".bootstrap.FutbolioApplication" android:label="Futbolio" android:icon="@drawable/ic_futbolio" android:roundIcon="@drawable/ic_futbolio" android:banner="@drawable/tv_banner"
         android:theme="@style/AppTheme" android:allowBackup="false" android:usesCleartextTraffic="true" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
@@ -20,5 +21,9 @@
             </intent-filter>
         </activity>
         <service android:name=".RelayService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.updates"
+            android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_file_paths" />
+        </provider>
     </application>
 </manifest>

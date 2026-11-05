@@ -6,24 +6,37 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.core.content.FileProvider
 import androidx.lifecycle.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.futbolio.android.bootstrap.FutbolioApplication
 import app.futbolio.android.presentation.*
 import app.futbolio.android.ui.TvScreen
 import app.futbolio.android.ui.tvTheme
+import app.futbolio.android.ui.futbolioTypography
+import app.futbolio.android.ui.AppUpdateDialog
+import app.futbolio.android.updates.AppUpdateViewModel
 import app.futbolio.application.ports.readLimited
 import kotlinx.coroutines.*
 
 /** Activity-owned platform effects only: documents, clipboard, intents and permissions. */
 class MainActivity : ComponentActivity() {
+    private val updates: AppUpdateViewModel by lazy { ViewModelProvider(this)[AppUpdateViewModel::class.java] }
+    private val updateInstaller = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
+    private val allowUpdates = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (packageManager.canRequestPackageInstalls()) launchUpdateInstaller()
+        else updates.installError("Allow Futbolio to install updates, then tap Install update again.")
+    }
     private val model: FutbolioViewModel by lazy {
         ViewModelProvider(this, object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST") override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -50,10 +63,45 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) { model.effects.collect(::effect) } }
+        lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) {
+            updates.messages.collect { Toast.makeText(this@MainActivity, it, Toast.LENGTH_LONG).show() }
+        } }
         setContent {
             val state by model.state.collectAsStateWithLifecycle()
-            MaterialTheme(colorScheme = tvTheme) { Surface(Modifier.fillMaxSize()) { TvScreen(state, model) } }
+            val update by updates.state.collectAsStateWithLifecycle()
+            LaunchedEffect(update.ready) { if (updates.takeInstallRequest()) installUpdate() }
+            MaterialTheme(colorScheme = tvTheme, typography = futbolioTypography) {
+                Surface(Modifier.fillMaxSize()) {
+                    TvScreen(state, model, onCheckUpdates = { updates.checkForUpdates(manual = true) },
+                        updateAvailable = update.release != null, onOpenUpdate = updates::show)
+                }
+                AppUpdateDialog(update, onUpdate = {
+                    if (update.ready == null) updates.download() else installUpdate()
+                }, onDismiss = updates::dismiss)
+            }
         }
+    }
+    override fun onStart() {
+        super.onStart()
+        updates.checkForUpdates()
+    }
+    private fun installUpdate() {
+        if (updates.state.value.ready == null) return
+        if (packageManager.canRequestPackageInstalls()) launchUpdateInstaller()
+        else try {
+            allowUpdates.launch(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+        } catch (_: ActivityNotFoundException) {
+            updates.installError("This device has no update-permission screen. Allow installs from Futbolio in Android settings.")
+        } catch (_: SecurityException) { updates.installError("Android blocked permission to install updates.") }
+    }
+    private fun launchUpdateInstaller() {
+        val file = updates.state.value.ready ?: return
+        try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.updates", file)
+            updateInstaller.launch(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+        } catch (_: ActivityNotFoundException) { updates.installError("No Android package installer is available on this device.") }
+        catch (_: Exception) { updates.installError("Could not open the Android installer. Please try again.") }
     }
     private fun effect(effect: AndroidEffect) {
         when (effect) {

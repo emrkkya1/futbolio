@@ -71,6 +71,13 @@ class EspnScoreEnrichmentTest {
         val stale = wire.meta(base.copy(fixture = fixture.copy(observedAt = now - 300_000)), PresentationConfig(), now)
         assertEquals(plain.s("poster"), stale.s("poster"))
         assertFalse(stale.s("description").contains("Score:"))
+        val hidden = wire.meta(base.copy(fixture = fixture), PresentationConfig(showTimesAndScores = false), now)
+        assertFalse(hidden.s("description").contains("Score:"))
+        assertFalse(hidden.s("description").contains("Match time:"))
+        assertTrue(hidden.s("description").contains("Kickoff:"))
+        assertTrue(hidden.s("description").contains("verified fixture data"))
+        assertTrue(hidden.s("poster").contains("details=off"))
+        assertNotEquals(live.s("poster"), hidden.s("poster"))
     }
 
     @Test fun realLocalCatalogAndPosterPathsEnrichBeforeRespondingWithoutExternalNetwork() = runBlocking {
@@ -129,6 +136,24 @@ class EspnScoreEnrichmentTest {
             assertEquals(live.s("poster"), updated.s("poster"), "Minute ticks must not trigger mass thumbnail reloads")
             get(updated.s("poster")); assertEquals("48'", rendered.last().minute)
             assertEquals(2, calls)
+            engine.configure(listOf(source), PresentationConfig(showTimesAndScores = false))
+            engine.catalog.refresh().await()
+            val withoutDetails = metas()
+            assertEquals(first.map { it.s("name") }.toSet(), withoutDetails.map { it.s("name") }.toSet(), "Display preference must not change catalog membership")
+            val hidden = withoutDetails.single { it.s("id") == live.s("id") }
+            get(hidden.s("poster"))
+            assertEquals("", rendered.last().score)
+            assertEquals("", rendered.last().minute)
+            assertTrue(rendered.last().live)
+            assertTrue(rendered.last().kickoffTime.isNotBlank())
+            assertFalse(hidden.s("description").contains("Score:"))
+            assertFalse(hidden.s("description").contains("Match time:"))
+            engine.configure(listOf(source), PresentationConfig(showTimesAndScores = true))
+            engine.catalog.refresh().await()
+            val shown = metas().single { it.s("id") == live.s("id") }
+            get(shown.s("poster"))
+            assertEquals("2 - 1", rendered.last().score)
+            assertEquals("48'", rendered.last().minute)
         } finally { engine.shutdown() }
     }
 }

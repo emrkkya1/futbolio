@@ -47,11 +47,12 @@ private data class PresentationDto(
     val displayTimeZone: String = "Europe/Istanbul", val hideFinished: Boolean = true,
     val showHalftime: Boolean = true, val scoresEnabled: Boolean = false,
     val teamAliases: Map<String, String> = emptyMap(), val leagueAliases: Map<String, String> = emptyMap(),
+    val showTimesAndScores: Boolean = true,
 ) {
-    fun model() = PresentationConfig(displayTimeZone, hideFinished, showHalftime, scoresEnabled, teamAliases, leagueAliases)
+    fun model() = PresentationConfig(displayTimeZone, hideFinished, showHalftime, scoresEnabled, teamAliases, leagueAliases, showTimesAndScores)
     companion object {
         fun from(value: PresentationConfig) = PresentationDto(value.displayTimeZone, value.hideFinished,
-            value.showHalftime, value.scoresEnabled, value.teamAliases, value.leagueAliases)
+            value.showHalftime, value.scoresEnabled, value.teamAliases, value.leagueAliases, value.showTimesAndScores)
     }
 }
 

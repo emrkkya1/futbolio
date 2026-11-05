@@ -34,11 +34,12 @@ internal class PosterStore(
         try {
             val epoch = synchronized(cache) { generation }
             val item = entries.posterEntry(id)
-            val zone = ZoneId.of(entries.presentation().displayTimeZone)
+            val preferences = entries.presentation()
+            val zone = ZoneId.of(preferences.displayTimeZone)
             val kickoff = item?.starts?.takeIf { it > 0 }?.let { Instant.ofEpochMilli(it).atZone(zone) }
             val model = if (item == null) PosterModel("Live Football", "Futbolio", background = BundledArtwork.background) else PosterModel(item.title, item.league.name,
                 item.home?.name.orEmpty(), item.away?.name.orEmpty(), status = item.state(time.wallMillis()).label,
-                kickoff = DisplayTime.kickoff(item.starts, entries.presentation()),
+                kickoff = DisplayTime.kickoff(item.starts, preferences),
                 homeLogo = item.home?.name?.let(BundledArtwork::team), awayLogo = item.away?.name?.let(BundledArtwork::team),
                 competitionLogo = BundledArtwork.competition(item.league.id), background = BundledArtwork.background,
                 kickoffTime = kickoff?.format(DateTimeFormatter.ofPattern("HH:mm", Locale.UK)).orEmpty(),
@@ -48,7 +49,8 @@ internal class PosterStore(
                 statusVerified = item.fixture?.let { it.fresh(time.wallMillis()) || it.state in listOf(MatchState.FINISHED, MatchState.CANCELLED) } == true,
                 competitionLightBackground = BundledArtwork.competitionLightBackground(item.league.id),
                 channelLogo = if (item.home == null && item.away == null) BundledArtwork.channel(item.title) else null,
-                score = item.fixture?.scoreText(time.wallMillis()).orEmpty(), minute = item.fixture?.clockText(time.wallMillis()).orEmpty())
+                score = if (preferences.showTimesAndScores) item.fixture?.scoreText(time.wallMillis()).orEmpty() else "",
+                minute = if (preferences.showTimesAndScores) item.fixture?.clockText(time.wallMillis()).orEmpty() else "")
             return renderers.withPermit {
                 synchronized(cache) { cache[id]?.takeIf { it.model == model }?.bytes }
                     ?: withContext(cpu) { renderer.renderMatch(model) }.also { bytes ->

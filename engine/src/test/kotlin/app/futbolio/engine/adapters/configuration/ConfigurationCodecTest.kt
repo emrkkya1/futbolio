@@ -9,6 +9,16 @@ import kotlinx.serialization.json.*
 import kotlin.test.*
 
 class ConfigurationCodecTest {
+    @Test fun timesAndScoresDefaultsOnForOldConfigsAndPersistsOff() {
+        val defaults = Configurations.defaults()
+        assertTrue(defaults.presentation.showTimesAndScores)
+        val disabled = defaults.copy(presentation = defaults.presentation.copy(showTimesAndScores = false))
+        assertEquals(disabled, Configurations.import(Configurations.export(disabled)))
+        val json = Json.parseToJsonElement(Configurations.export(disabled)).jsonObject
+        val old = JsonObject(json + ("presentation" to JsonObject(json.getValue("presentation").jsonObject - "showTimesAndScores")))
+        assertTrue(Configurations.import(old.toString()).presentation.showTimesAndScores)
+    }
+
     @Test fun explicitDtoPreservesSchemaAndAllCurrentFields() {
         val config = Configurations.defaults().let { it.copy(sources = it.sources.map { source -> source.copy(enabled = false) }) }
         val encoded = Configurations.export(config)
