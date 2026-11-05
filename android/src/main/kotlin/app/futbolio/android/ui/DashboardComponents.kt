@@ -23,7 +23,7 @@ import app.futbolio.application.api.*
 import app.futbolio.application.presentation.*
 import app.futbolio.domain.provider.SourceConfig
 
-internal val lime = Color(0xff4fa14c)
+internal val lime = Color(0xff3a8638)
 internal val emerald = lime
 internal val lavender = Color(0xffa5a0cb)
 internal val quiet = Color(0xffb5b5b5)
