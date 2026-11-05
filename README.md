@@ -1,154 +1,59 @@
 <p align="center">
-  <img src="docs/assets/futbolio-logo.svg" alt="Futbolio" width="420">
+  <img src="docs/assets/futbolio-logo.svg" alt="Futbolio" width="320">
 </p>
 
-<p align="center">
-  <strong>Your football. Straight to Stremio.</strong><br>
-  Live football discovery and HLS relaying, with a Turkish-football focus.
-</p>
+Futbolio is a companion app for Stremio that adds football matches and sports channels from supported third-party providers. It organizes listings into catalogs and passes available streams to Stremio for playback, with a focus on Turkish football. **You watch in Stremio and keep Futbolio running in the background.** Futbolio does not provide broadcasts or play video itself.
 
-<p align="center">
-  <a href="https://github.com/emrkkya1/futbolio/actions/workflows/check.yml"><img src="https://github.com/emrkkya1/futbolio/actions/workflows/check.yml/badge.svg" alt="Build and test checks"></a>
-  <img src="https://img.shields.io/badge/Kotlin-shared_engine-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin shared engine">
-  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&amp;logoColor=white" alt="Android 8.0 and newer">
-  <img src="https://img.shields.io/badge/Desktop-Compose-4285F4?logo=jetpackcompose&amp;logoColor=white" alt="Compose Desktop">
-</p>
+## Download and install
 
-<p align="center">
-  <a href="#what-it-does">Features</a> ·
-  <a href="#what-it-does-not-do">Limitations</a> ·
-  <a href="#getting-started">Get started</a> ·
-  <a href="#build-and-test">Build</a> ·
-  <a href="#architecture-and-documentation">Documentation</a>
-</p>
+The published release is for **Android / Android TV 8.0 or newer**. Install Futbolio and [Stremio](https://www.stremio.com/downloads) on the **same device**; no computer is needed during playback.
 
-Futbolio connects supported third-party providers to Stremio. It organizes matches and sports channels into catalogs, resolves available stream links, and relays HLS media through a local server. **Stremio handles video and audio playback; Futbolio is not a video player or a streaming service.**
+1. Open the [latest release](https://github.com/emrkkya1/futbolio/releases/latest) and expand **Assets** if needed.
+2. Download **`futbolio-vX.X.X.apk`**. Choose the APK, not the source-code ZIP or TAR files.
+3. Open the APK on your Android device and select **Install**. On a TV, transfer the file to the TV first and open it with a file manager. If Android asks, allow that browser or file manager to **install unknown apps**; you can turn this permission off afterward.
+4. Open Futbolio and select **Start Futbolio**, then **Install / open Stremio**. Confirm the add-on installation in Stremio if prompted.
+5. In Stremio, browse Futbolio's catalogs, choose a match or channel, and select an available source. **Leave Futbolio running while you watch.**
 
-> [!IMPORTANT]
-> **Development build.** Automated tests cover discovery, the Stremio API, and media transport—not guaranteed decoded playback or full-match stability in every client. See the [manual acceptance checklist](docs/MANUAL-TESTS.md).
+To update, download the newer release APK and install it over the existing app.
 
-<p align="center">
-  <img src="test-results/tv-dashboard-online.png" alt="Futbolio Android TV dashboard showing relay controls and provider diagnostic cards" width="960">
-  <br>
-  <sub>Android TV dashboard · Relay running; providers unavailable in this captured session. Playback is not confirmed.</sub>
-</p>
+### If Stremio does not open or install the add-on
 
-## What it does
+Check that Stremio is installed and Futbolio is running. Some Stremio TV versions do not support add-on installation links or manual URLs. If your version accepts a manifest URL, use **Copy URL** in Futbolio:
 
-- Presents Live Now, Starting Soon, Turkish Football, Sports Channels, and All Matches catalogs, plus search.
-- Combines matching provider listings into one match with multiple sources; includes competition filters, kickoff times, and locally generated posters.
-- Adds ESPN scores and match minutes to matched descriptions/posters, prefixes halftime titles with `HT |`, and hides confirmed ended matches. Unmatched listings are unchanged; see [score enrichment](docs/SCORE-ENRICHMENT.md).
-- Supports PPV, PapazSports, Taraftarium24, FutbolVivo, and 720pstream through configurable adapters.
-- Relays HLS playlists, segments, and keys while preserving required headers and supported provider sessions. Media is forwarded incrementally, without saving video files.
-- Provides provider diagnostics, configuration import/export, and explicit external-browser options when a playable link cannot be extracted.
-
-## What it does not do
-
-- **Host or supply broadcasts.** Availability and access rights depend on third-party providers; domains and page layouts can change.
-- **Bypass access controls.** No DRM, login, CAPTCHA, geographic restriction, or paywall bypass is implemented. Use only streams you are authorized to access.
-- **Transcode or repair media.** Codec support and final playback compatibility depend on Stremio and the device.
-- **Guarantee live status or match identity.** Unverified statuses are kickoff-based estimates; schedules and duplicate matching can be imperfect. There is no guaranteed EPG or official live-score service.
-- **Execute provider JavaScript or run an embedded browser.** JavaScript-only players may offer only a website fallback, which opens outside Stremio's player.
-- **Operate as a public relay.** Futbolio is intended for the same device or a trusted private network, not internet-facing deployment.
-
-## Getting started
-
-Build the appropriate app using the commands below, then:
-
-1. Open Futbolio and select **Start Futbolio**.
-2. Use **Install in Stremio** / **Install / open Stremio**, or install the displayed manifest URL through a supported Stremio interface.
-3. Browse Futbolio's catalogs in Stremio and select a stream. **Keep Futbolio running during playback.**
-
-### Desktop
-
-Runs on the same computer as Stremio, or serves trusted devices on the local network. For another device, stop Futbolio, select your private LAN address under **Network**, save, restart, and install the new URL on that device.
-
-LAN URLs contain a bearer access token: share them only with trusted devices. Do not expose the port publicly or configure router port forwarding. The listener has no TLS or per-user rate limiting. Keep the computer awake; firewall rules, guest Wi-Fi isolation, or a changed LAN address may interrupt access.
-
-Closing the window hides it to the tray where supported; otherwise it exits. **Quit** stops the relay. Packaged desktop distributions include a Java runtime; keep the complete application directory together.
-
-### Android TV
-
-Requires **Android 8.0 / API 26 or newer**. Futbolio and Stremio run on the **same Android device**—no PC is required, and there is no LAN listener. The manifest URL is `http://127.0.0.1:7000/manifest.json`.
-
-The foreground service can continue after the activity closes, but Android may stop it under memory pressure. Add-on installation varies by Stremio version; some TV clients do not accept URL installation or deep links. A PC cannot reach the TV's localhost server, and web clients may require HTTPS.
-
-## Build and test
-
-### Application versioning
-
-`futbolioVersion` in `gradle.properties` is the single application version for the
-engine, Stremio manifest, desktop package and Android APK. Android's version code is
-derived automatically as `major × 1,000,000 + minor × 1,000 + patch` (e.g. `0.3.1`
-→ `3001`). Supported ranges are major `0..2099`, minor/patch `0..999`; `0.0.0`,
-prereleases, build suffixes and leading zeros are rejected. Use a higher application
-version for every published APK update, including rebuilds. Changes are recorded
-in [CHANGELOG.md](CHANGELOG.md); releases use `vX.Y.Z` tags on the reviewed commit
-after merging to `main`. Build every platform artifact from that same commit and
-preserve the Android signing key so updates retain settings. Debug-signed APKs are
-development builds, not production releases. Never commit signing keys or passwords.
-
-### Build commands
-
-Requires **JDK 21**, **Android SDK platform 35 and build tools** for Android tasks, and network access for the first dependency download. Set `JAVA_HOME` and `ANDROID_HOME` as needed. On Windows, use `gradlew.bat` instead of `./gradlew`.
-
-```sh
-# Run the desktop app from source
-./gradlew :desktop:run
-
-# Build the Android debug APK and a desktop distribution
-./gradlew :android:assembleDebug :desktop:createDistributable
-
-# Run deterministic core tests and architecture checks
-./gradlew :domain:test :application:test :engine:check
+```text
+http://127.0.0.1:7000/manifest.json
 ```
 
-- Android debug APK: `android/build/outputs/apk/debug/android-debug.apk`.
-- Desktop distribution: `desktop/build/compose/binaries/main/app/`.
-- Host unit tests: `:desktop:headlessTest` and `:android:testDebugUnitTest`. Desktop UI tests remain manual via `:desktop:test` (requires a graphical session).
-- Live provider tests reside under [`engine/src/live/`](engine/src/live/) and run manually with `./gradlew :engine:liveTest`, never as CI gates; see [live testing](docs/LIVE-PROVIDER-TESTS.md). Successful media retrieval is not proof of Stremio playback.
+This address refers to the Android device itself, not your PC. Opening it on another device will not reach Futbolio on the TV. See **Installation help** in the app for client-specific limitations; web clients may require HTTPS.
 
-Native packages must be built on their target OS. Android release builds require signing credentials; debug or development-signed builds are not production releases. Windows build and device-check helpers are in [`scripts/`](scripts/).
+## What appears in Stremio
 
-### CI and Android releases
+- **Live Now**, **Starting Soon**, **Turkish Football**, **Sports Channels**, and **All Matches** catalogs, plus search and competition filters.
+- Match posters with team crests, competition names, and kickoff times. Matching provider listings are grouped into one match with multiple sources.
+- Scores and match minutes when a listing can be matched to ESPN data. Confirmed ended matches are hidden; other live-status labels may be kickoff-based estimates.
 
-Pushes and pull requests run network-isolated core tests, headless desktop and
-Android unit tests, version checks, and Android debug/release lint. CI does not
-run Compose UI tests, live-provider checks, or desktop packaging.
+### Example posters
 
-To publish an APK, increase `futbolioVersion` in `gradle.properties`, update
-`CHANGELOG.md`, and merge/push to `main`. After checks pass, CI builds a signed,
-optimized release APK and publishes **`futbolio-vX.X.X.apk`** in the GitHub release
-tagged `vX.X.X` at that exact commit. Unchanged versions and existing version tags
-do not publish again. Failed releases can be retried by rerunning the failed
-workflow; no version bump is needed unless an APK/tag was already published.
-If the fix changes the workflow itself, use **Actions → Checks → Run workflow**
-on `main` to retry the current untagged version through all checks.
+<p>
+  <img src="docs/assets/poster-match.jpg" alt="Example scheduled-match poster for Arsenal vs Chelsea with kickoff time and team crests" width="230">
+  <img src="docs/assets/poster-live.jpg" alt="Example live-match poster with a 2–1 score and 47th-minute indicator" width="230">
+  <img src="docs/assets/poster-channel.jpg" alt="Example sports-channel poster for beIN Sports 1" width="230">
+</p>
 
-Repository administrators must first configure these GitHub Actions secrets:
+Illustrative fixtures and scores rendered by Futbolio, not current listings or proof of stream availability. Third-party marks belong to their owners; see [artwork notices](engine/src/main/resources/artwork/ARTWORK-NOTICES.md).
 
-- `ANDROID_KEYSTORE_BASE64`: base64-encoded release keystore.
-- `ANDROID_STORE_PASSWORD`: keystore password.
-- `ANDROID_KEY_ALIAS`: signing-key alias.
-- `ANDROID_KEY_PASSWORD`: signing-key password.
+## Availability and limits
 
-Use the same backed-up release key for all updates. Missing secrets fail the
-release rather than producing a debug-signed APK. Signing files are restored only
-for the build and removed afterward; never commit them. No custom GitHub token is
-needed: the release job uses its scoped `GITHUB_TOKEN` with contents-write access.
-See [CI and release operations](docs/CI.md) for validation and recovery details.
+Futbolio supports PPV, PapazSports, Taraftarium24, FutbolVivo, and 720pstream. Availability depends on those providers, and some sources may only open an external website. Futbolio does not bypass logins, DRM, CAPTCHAs, paywalls, or geographic restrictions. Use only streams you are authorized to access.
 
-## Architecture and documentation
+Playback depends on the source, Stremio, and your device's codec support. Full-match stability is not guaranteed, and Android may stop the background service under memory pressure. Futbolio sends no analytics, but providers receive requests and can see your public IP.
 
-Both apps share one Kotlin/JVM engine. `domain` contains pure matching and catalog policies; `application` owns services and ports; `engine` implements providers, networking, the Stremio API, and relaying. Desktop and Android supply platform lifecycle, persistence, and presentation.
+## Desktop
 
-- [Architecture and safety boundaries](docs/ARCHITECTURE.md) · [Restructure progress](docs/RESTRUCTURE-PROGRESS.md)
-- [Device and Stremio acceptance checks](docs/MANUAL-TESTS.md) · [Historical verification notes](docs/VERIFICATION.md)
-- [Provider research and limitations](docs/STATIC-STREAM-RESEARCH.md)
-- [Artwork provenance and redistribution restrictions](engine/src/main/resources/artwork/ARTWORK-NOTICES.md)
+A desktop app is available from source; **desktop installers are not currently published in releases**. It can serve Stremio on the same computer or trusted devices on a private network. Never expose its port publicly or share its token-bearing URL outside that network.
 
-## Privacy and third-party assets
+[Changelog](CHANGELOG.md) · [Score enrichment](docs/SCORE-ENRICHMENT.md)
 
-Desktop settings are stored in `~/.futbolio/`; `desktop.json` contains the access token and must not be published. Android uses private app storage with backup disabled. Futbolio uploads no analytics or diagnostics, but upstream providers receive requests and can see your public IP.
+### Development
 
-Third-party logos remain the property of their respective owners. Bundled artwork does not establish redistribution rights or endorsement; review permissions before distributing it.
+For local builds or contributions, see the [development notes](docs/DEVELOPMENT.md), [architecture](docs/ARCHITECTURE.md), [CI and releases](docs/CI.md), and [testing checklist](docs/MANUAL-TESTS.md).
