@@ -238,4 +238,25 @@ class ReadyStreamSnapshotTest {
         assertEquals(2, response.size, "Cache TTL during another provider's extraction cannot drop a source from this request")
         assertEquals(setOf("${fast.page}.m3u8", "${slow.page}.m3u8"), response.map { it.url }.toSet())
     }
+
+    @Test fun responseIncludesNewlyAvailableMetadataWithoutDelayingColdLinkExtraction() = runTest {
+        val ready = row("ready"); val cold = row("cold")
+        val resolver = StreamResolver(backgroundScope, net, directory {
+            if (it == cold) delay(2500)
+            listOf(choice(it))
+        }, clock(testScheduler), assessor = StreamAssessor {
+            delay(1000)
+            StreamAssessment(ConnectionStatus.GOOD, resolution = "1920x1080", samples = 2)
+        })
+        resolver.prepare(ready, resolver.revision())
+        val measurement = async { resolver.measurePrepared(ready, resolver.revision()) }
+        runCurrent()
+        val response = resolver.awaitPreparedSnapshot(listOf(ready, cold), resolver.revision()).filter { it.url.isNotBlank() }
+        assertEquals(2500L, testScheduler.currentTime)
+        assertEquals(2, response.size)
+        assertEquals(ConnectionStatus.GOOD, response.first().assessment.status)
+        assertEquals("1920x1080", response.first().assessment.resolution)
+        assertEquals(ConnectionStatus.UNKNOWN, response.last().assessment.status)
+        measurement.await()
+    }
 }

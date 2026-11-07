@@ -190,9 +190,9 @@ class StreamResolver(
                             }
                         }
                         work.choices = resolved
-                        if (background && prepareOnly) publish(item, work, epoch, resolved, progressive = true)
+                        if (background && prepareOnly) publish(item, work, epoch, resolved)
                         work.prepared.complete(Unit)
-                        val choices = if (prepareOnly) resolved else assess(resolved, work) { observed -> publish(item, work, epoch, observed, progressive = true) }
+                        val choices = if (prepareOnly) resolved else assess(resolved, work) { observed -> publish(item, work, epoch, observed) }
                         publish(item, work, epoch, choices)
                         choices
                     } finally {
@@ -226,7 +226,7 @@ class StreamResolver(
         return work.task.await()
     }
 
-    private fun publish(item: Listing, work: Pending, epoch: Long, choices: List<StreamChoice>, progressive: Boolean = false) = synchronized(this) {
+    private fun publish(item: Listing, work: Pending, epoch: Long, choices: List<StreamChoice>) = synchronized(this) {
         if (epoch != generation || pending[item.id] !== work) return@synchronized
         // Link lifetime and measurement freshness are independent. Probing never
         // extends a signed URL's lifetime; refreshing a URL never resets sample age.

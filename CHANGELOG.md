@@ -4,6 +4,16 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
+## Unreleased
+
+### Changed
+- Always return every playable provider option without waiting for stream metadata
+  or bandwidth checks; include whatever information is already available.
+- Refresh prepared links independently in the background and reuse matching fresh
+  measurements without resetting their age. Keep link and evidence expiry separate.
+- Build Android APKs, Linux AppImages and Windows installers in parallel. Publish
+  a complete release only after all builds and checks pass; PR APKs use debug signing.
+
 ## 0.4.4
 
 ### Added

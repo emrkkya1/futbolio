@@ -26,6 +26,12 @@ Two additional desktop packaging jobs run on every main push/PR:
 - **Desktop Windows exe** (Windows, JDK 21, WiX 3): run headless host tests, build
   `:desktop:packageExe`, and smoke-test the bundled Windows launcher/runtime.
 
+**Android APK** builds independently, in parallel with desktop packaging and tests.
+PRs build a debug-signed APK without release secrets; an untagged main version bump
+builds the production-signed APK. Its only prerequisite is quick version detection,
+not the desktop jobs or core tests. Debug APKs cannot update a production-signed
+installation. All builds upload their artifacts before publication is considered.
+
 The native smoke test loads all bundled fonts and serves a real loopback manifest
 with no provider configuration or user settings. It does not prove installer UX,
 graphics-driver compatibility, or Stremio playback on every target machine.
@@ -44,13 +50,14 @@ an existing `vX.X.X` tag skip release. An initial branch push with no predecesso
 can publish an untagged version. Tags are fetched with full history. No version
 is bumped automatically.
 
-Only after core checks and both desktop packaging jobs pass, a new version builds `:android:assembleRelease`
-using the production signing configuration (never `developmentSigning`). The APK
-signature is verified, then the APK is uploaded as both a workflow artifact and
-a GitHub release asset named `futbolio-vX.X.X.apk`. GitHub creates the `vX.X.X` tag
-at the checked commit, with generated release notes. PRs, non-main pushes, and
-tag pushes cannot publish. A dependent publication job attaches the already-tested
-desktop assets to that same GitHub release:
+Builds do not wait for one another. **Publication** waits for core/host checks, both
+desktop packaging jobs and the APK build. Production APK builds use the release
+signing configuration (never `developmentSigning`) and verify the signature.
+The publication job downloads all three platforms' artifacts, verifies desktop
+checksums and adds an APK checksum, then creates one draft release with every
+asset before making it public. GitHub creates the `vX.X.X` tag at the checked
+commit, with generated notes. PRs, non-main pushes and tag pushes cannot publish.
+Release assets include `futbolio-vX.X.X.apk` and its `.sha256` sidecar, plus:
 
 - `futbolio-vX.X.X-linux-x86_64.AppImage` and its `.sha256` sidecar
 - `futbolio-vX.X.X-windows-x86_64.exe` and its `.sha256` sidecar
@@ -75,8 +82,8 @@ signed with that identity. The keystore is restored to a private runner temporar
 file and removed even when the build fails. Passwords are passed only to the
 build step through the existing `FUTBOLIO_*` environment variables.
 
-Normal check/packaging jobs have read-only repository permissions; only main
-publication jobs have contents-write permission. Releases use `GITHUB_TOKEN`.
+Normal check/packaging jobs have read-only repository permissions; only the main
+publication job has contents-write permission. Releases use `GITHUB_TOKEN`.
 
 ## Recovery and local validation
 
@@ -88,10 +95,11 @@ is immutable in this workflow: never overwrite its APK, reuse its version, or
 delete its tag merely to rebuild. Publish a higher version for a changed APK.
 If a tag/release was created but upload/publication was interrupted, inspect it
 manually rather than blindly rerunning publication; the detector skips existing
-tags. Workflow artifacts can recover an interrupted publication. If only desktop
-asset upload failed after the release was created, rerun that failed job in the
-same workflow (preserving its original release decision). Do not overwrite already
-published files; inspect the release assets before recovery.
+tags. Workflow artifacts can recover an interrupted publication. If publication
+fails after draft creation, inspect that draft and its assets, verify/complete
+the upload, then publish it; do not overwrite published files or delete its tag
+blindly to force a rerun. A draft is deliberately not exposed to normal downloaders
+or Android's stable-release updater until all assets have been uploaded.
 
 ```sh
 python3 -m unittest discover -s scripts/ci -p 'test_*.py' -v

@@ -186,6 +186,9 @@ class LiveStreamPrefetcher(
                         if (size < limits.measuredProvidersPerMatch) putIfAbsent(listing.source.kind, listing)
                     }
                 } }
+                synchronized(progress) {
+                    measured.forEach { (id, providers) -> timings[id] = timings.getValue(id).copy(measuredProviders = providers.keys.toSet()) }
+                }
                 // Give each likely match a useful first pass before spending time on second
                 // options. Consume whichever provider becomes ready first, not registry order.
                 for (entry in selected) {
@@ -223,7 +226,11 @@ class LiveStreamPrefetcher(
                 for (entry in selected) {
                     for (listing in measured.getValue(entry.id).values) {
                         if (!allowed()) break
-                        if (resolver.hasFresh(listing)) rated(entry, resolver.measurePrepared(listing, revision, limits.prefetchChoicesPerListing))
+                        if (resolver.hasFresh(listing)) try {
+                            rated(entry, resolver.measurePrepared(listing, revision, limits.prefetchChoicesPerListing))
+                        } finally {
+                            if (!currentCoroutineContext().isActive) resolver.cancelPrefetch(listing)
+                        }
                     }
                 }
                 preparations.values.awaitAll()
