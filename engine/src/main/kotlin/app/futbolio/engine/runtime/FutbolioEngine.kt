@@ -5,6 +5,7 @@ import app.futbolio.application.catalog.*
 import app.futbolio.application.configuration.ConfigurationValidator
 import app.futbolio.application.ports.*
 import app.futbolio.application.resolution.StreamResolver
+import app.futbolio.application.resolution.LiveStreamPrefetcher
 import app.futbolio.application.fixtures.FixtureService
 import app.futbolio.application.workbench.ProviderWorkbench
 import app.futbolio.domain.provider.SourceConfig
@@ -13,6 +14,7 @@ import app.futbolio.engine.HttpUpstream
 import app.futbolio.engine.adapters.diagnostics.Diagnostics
 import app.futbolio.engine.adapters.posters.PosterStore
 import app.futbolio.engine.adapters.probes.SegmentProbe
+import app.futbolio.engine.adapters.probes.HlsStreamAssessor
 import app.futbolio.engine.adapters.providers.ProviderRegistry
 import app.futbolio.engine.adapters.relay.*
 import app.futbolio.engine.adapters.scores.espn.EspnScoreFeed
@@ -23,6 +25,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -53,17 +56,33 @@ internal class FutbolioEngine(
     private val disposed = AtomicBoolean()
     private val stopped = CompletableDeferred<Unit>()
     private val mutablePhase = MutableStateFlow(RuntimePhase.STOPPED)
+    @Volatile private var playbackQuietUntil = 0L
     override val phase = mutablePhase.asStateFlow()
     internal val diagnostics = Diagnostics(time, limits)
     internal val catalog = Catalog(scope, net, sources, providers, time, limits)
-    internal val resolver = StreamResolver(scope, net, providers, time, limits, diagnostics)
+    internal val resolver = StreamResolver(scope, net, providers, time, limits, diagnostics, HlsStreamAssessor(net)) {
+        diagnostics.activeMedia.get() == 0 && time.monotonicMillis() >= playbackQuietUntil
+    }
     internal val tokens = RelayTokens(host.base, limits, time::monotonicMillis)
     internal val workbench = ProviderWorkbench(scope, net, resolver, providers, SegmentProbe(net), time)
     private val fixtures = FixtureService(scope, scoreFeed, time)
     private val entries = EntryCatalog(catalog, fixtures, presentation, scope, time, events = diagnostics)
+    internal val prefetcher = LiveStreamPrefetcher(scope, resolver, { entries.entries(refreshScores = false) }, entries::presentation, time, limits, diagnostics)
     private val posters = PosterStore(entries, poster, time, limits)
-    private val relay = MediaRelay(net, tokens, diagnostics, activity, limits, io)
-    private val server = StremioServer(host, this, catalog, entries, resolver, workbench, fixtures, posters, relay, tokens, diagnostics, limits, time)
+    private val measuredActivity = object : MediaActivity {
+        private fun pauseChecks() {
+            playbackQuietUntil = time.monotonicMillis() + limits.playbackQuietMillis
+            prefetcher.reset()
+            resolver.pauseMeasurements()
+        }
+        override fun started() { pauseChecks(); activity.started() }
+        override fun progress() = activity.progress()
+        override fun finished() { pauseChecks(); activity.finished() }
+    }
+    private val relay = MediaRelay(net, tokens, diagnostics, measuredActivity, limits, io)
+    private val server = StremioServer(host, this, catalog, entries, resolver, workbench, fixtures, posters, relay, tokens, diagnostics, limits, time, prefetcher::browsing)
+
+    init { scope.launch { catalog.changes.collect { prefetcher.changed() } } }
 
     override val providerStatuses get() = catalog.status
     override val providerReports get() = workbench.reports
@@ -85,6 +104,7 @@ internal class FutbolioEngine(
             mutablePhase.value = RuntimePhase.RUNNING
             diagnostics.event("${if (host.desktop) "Desktop" else "On-device"} service started")
             catalog.refresh()
+            prefetcher.start()
             Unit
         } catch (failure: Throwable) {
             server.stop()
@@ -97,12 +117,14 @@ internal class FutbolioEngine(
         check(!disposed.get()) { "Engine is closed" }
         ConfigurationValidator(providers, limits).validateSources(sources)
         presentation.validate()
+        prefetcher.reset()
         workbench.reset()
         catalog.configure(sources)
         entries.configure(presentation)
         resolver.trim()
         posters.clear()
         catalog.refresh(true)
+        prefetcher.browsing()
         diagnostics.event("Provider settings updated")
     }
 
@@ -121,7 +143,7 @@ internal class FutbolioEngine(
     }
     override fun confirmPlayback(sourceId: String, choiceId: String, works: Boolean) = workbench.confirmPlayback(sourceId, choiceId, works)
     override fun diagnosticSnapshot() = diagnostics.snapshot()
-    override fun trim() { catalog.trim(); resolver.trim(); tokens.trim(); posters.clear() }
+    override fun trim() { prefetcher.reset(); catalog.trim(); resolver.trim(); tokens.trim(); posters.clear() }
     internal fun manifest() = StremioWire(host).manifest()
 
     override suspend fun shutdown() {
@@ -132,7 +154,7 @@ internal class FutbolioEngine(
                 lifecycle.withLock {
                     try { server.stop() } finally {
                         synchronized(mutations) {
-                            workbench.reset(); resolver.trim(); fixtures.reset(); entries.clear(); posters.clear(); tokens.clear()
+                            prefetcher.stop(); workbench.reset(); resolver.trim(); fixtures.reset(); entries.clear(); posters.clear(); tokens.clear()
                             scope.cancel()
                         }
                         if (ownership == TransportOwnership.OWNED) net.close()

@@ -33,6 +33,8 @@ This address refers to the Android device itself, not your PC. Opening it on ano
 - **Live Now**, **Starting Soon**, **Turkish Football**, **Sports Channels**, and **All Matches** catalogs, plus search and competition filters.
 - Match posters with team crests, competition names, and kickoff times. Matching provider listings are grouped into one match with multiple sources.
 - Scores and match minutes when a listing can be matched to ESPN data. Confirmed ended matches are hidden; other live-status labels may be kickoff-based estimates.
+- Compact stream connection snapshots, with stronger measured options listed first: provider and grade, resolution/frame rate/bitrate when available, and measurement age. Checks are bounded and cached; they are not a freeze-free playback guarantee. See [stream metadata](docs/stream-metadata.md).
+- Background checks prepare up to four likely Live Now matches, prioritizing Galatasaray/Fenerbahçe/Beşiktaş and major competitions. Measured connection levels are **GOOD / MEDIUM / SLOW**; incomplete checks stay unrated. Probing pauses during playback. See [predictive prefetch](docs/PREDICTIVE-STREAM-PREFETCH.md).
 
 ### Example posters
 

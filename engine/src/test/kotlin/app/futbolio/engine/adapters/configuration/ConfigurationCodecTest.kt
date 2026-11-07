@@ -52,4 +52,20 @@ class ConfigurationCodecTest {
         val removed = defaults.copy(sources = defaults.sources.filterNot { it.kind == "720pstream" })
         assertEquals(removed, Configurations.import(Configurations.export(removed)))
     }
+
+    @Test fun oldFutbolVivoUtcDefaultIsMigratedWithoutChangingCustomSettings() {
+        val defaults = Configurations.defaults()
+        val shipped = defaults.sources.single { it.kind == "futbolvivo" }
+        fun upgrade(source: SourceConfig) = Configurations.import(Configurations.export(
+            defaults.copy(defaultsRevision = 4, sources = listOf(source)))).sources.single()
+        assertEquals(shipped, upgrade(shipped.copy(timeZone = "UTC")))
+        for (custom in listOf(shipped.copy(timeZone = "Europe/Madrid"), shipped.copy(timeZone = "UTC", url = "https://custom.example/"),
+            shipped.copy(timeZone = "UTC", apiUrl = "https://custom.example/agenda"), shipped.copy(timeZone = "UTC", id = "custom-instance"))) {
+            assertEquals(custom, upgrade(custom))
+        }
+        val removed = defaults.copy(defaultsRevision = 4, sources = defaults.sources.filterNot { it.kind == "futbolvivo" })
+        assertTrue(Configurations.import(Configurations.export(removed)).sources.none { it.kind == "futbolvivo" })
+        val upgraded = Configurations.import(Configurations.export(defaults.copy(defaultsRevision = 4)))
+        assertEquals(upgraded, Configurations.import(Configurations.export(upgraded)))
+    }
 }

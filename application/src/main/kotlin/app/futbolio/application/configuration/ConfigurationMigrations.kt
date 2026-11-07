@@ -23,6 +23,15 @@ object ConfigurationMigrations {
             sources.none { it.id == "720pstream" || it.kind == "720pstream" } && sources.size < 8) {
             bundled("720pstream")?.let { sources = sources + it }
         }
-        return config.copy(sources = sources, defaultsRevision = 4)
+        if (oldRevision < 5) {
+            val futbolvivo = bundled("futbolvivo")
+            if (futbolvivo != null) sources = sources.map { source ->
+                // Repair the shipped default, never reinterpret a custom endpoint/timezone.
+                if (source.id == "futbolvivo" && source.kind == "futbolvivo" && source.timeZone == "UTC" &&
+                    source.url.trimEnd('/') == "https://futbolvivo.online" && source.apiUrl.isBlank())
+                    source.copy(timeZone = futbolvivo.timeZone) else source
+            }
+        }
+        return config.copy(sources = sources, defaultsRevision = 5)
     }
 }

@@ -61,7 +61,7 @@ private data class ConfigDto(
     val schema: Int = 1,
     val sources: List<SourceDto>,
     val presentation: PresentationDto = PresentationDto(),
-    val defaultsRevision: Int = 4,
+    val defaultsRevision: Int = 5,
 ) {
     fun model() = FutbolioConfig(schema, sources.map { it.model() }, presentation.model(), defaultsRevision)
     companion object {

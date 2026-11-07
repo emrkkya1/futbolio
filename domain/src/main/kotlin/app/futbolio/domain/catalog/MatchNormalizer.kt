@@ -16,7 +16,10 @@ object MatchNormalizer {
     private val clock = Regex("(?:^|\\s)([0-2]\\d:[0-5]\\d)(?:$|\\s)")
     private val clubDecorations = setOf("fc", "cf", "sk", "jk")
     private val regionalAliases = mapOf("psv" to "PSV Eindhoven", "brujas" to "Club Brugge", "club brujas" to "Club Brugge",
-        "leipzig" to "RB Leipzig", "porto" to "FC Porto", "oporto" to "FC Porto", "slavia prag" to "Slavia Prague", "slavia praga" to "Slavia Prague")
+        "leipzig" to "RB Leipzig", "porto" to "FC Porto", "oporto" to "FC Porto", "slavia prag" to "Slavia Prague", "slavia praga" to "Slavia Prague",
+        "sporting de lisboa" to "Sporting CP", "sporting lisbon" to "Sporting CP", "estac troyes" to "Troyes",
+        "amed" to "Amed SFK", "amed sk" to "Amed SFK", "amedspor" to "Amed SFK", "oviedo" to "Real Oviedo",
+        "tigres" to "Tigres UANL", "defensa" to "Defensa y Justicia", "peterborough" to "Peterborough United")
     private val genericCompetitions = setOf("", "football", "soccer", "futbol", "futebol", "matches")
 
     fun teamName(name: String, config: PresentationConfig): String {
@@ -123,7 +126,8 @@ object MatchNormalizer {
                         val close = kotlin.math.abs(item.start - first.start) <= 45 * 60_000
                         val sameDay = Instant.ofEpochMilli(item.start).atZone(ZoneOffset.UTC).toLocalDate() ==
                             Instant.ofEpochMilli(first.start).atZone(ZoneOffset.UTC).toLocalDate()
-                        val exactPair = item.homeKey == first.homeKey && item.awayKey == first.awayKey
+                        val exactPair = item.homeKey == first.homeKey && item.awayKey == first.awayKey ||
+                            item.homeKey == first.awayKey && item.awayKey == first.homeKey
                         val compatiblePair = (item.homeKey == first.homeKey || item.awayKey == first.awayKey) &&
                             compatibleTeam(item.homeKey, first.homeKey) && compatibleTeam(item.awayKey, first.awayKey)
                         (exactPair && (close || sameDay && kotlin.math.abs(item.start - first.start) <= 12 * CatalogVisibility.HOUR)) ||
@@ -149,11 +153,12 @@ object MatchNormalizer {
         }
         return parsed.indices.groupBy(::root).values.map { indices ->
             val group = indices.map { parsed[it] }
-            // Prefer an explicit timestamp over a clock-only listing; use the most-supported
-            // timestamp, then the later one, as provisional metadata until a conflict is resolved.
+            // Independent provider agreement outweighs a lone explicit but incorrect timestamp.
+            // Alternate player rows from one provider cannot manufacture a schedule majority.
             val first = group.sortedWith(compareByDescending<Parsed> { Leagues.allowed(it.league) }
+                .thenByDescending { candidate -> group.filter { it.start / 60_000 == candidate.start / 60_000 }.map { it.row.source.id }.distinct().size }
                 .thenByDescending { it.row.starts > 0 }
-                .thenByDescending { candidate -> group.count { it.start == candidate.start } }.thenByDescending { it.start }
+                .thenByDescending { it.start }
                 .thenBy { it.row.source.id }).first()
             val matched = group.mapNotNull { it.fixture }.distinctBy { it.league.id to it.id }
             val fixture = matched.singleOrNull()

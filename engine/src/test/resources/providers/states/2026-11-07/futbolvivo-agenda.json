@@ -1,0 +1,8 @@
+{"events":[
+  {"id":42571,"time":"10:00:00","title":"Premier League: Arsenal vs Hull City","date":"2026-11-07","sport":"futbol","embeds":[{"name":"ESPN5","lang":"Español","iframe":"https://player.example/arsenal"}]},
+  {"id":42572,"time":"10:00:00","title":"Premier League: Fulham vs Newcastle United","date":"2026-11-07","sport":"futbol","embeds":[{"name":"Disney+","lang":"Español","iframe":"https://player.example/fulham"}]},
+  {"id":42577,"time":"11:00:00","title":"Süper Lig: Galatasaray vs Amed","date":"2026-11-07","sport":"futbol","embeds":[{"name":"Disney+","lang":"Español","iframe":"https://player.example/galatasaray"}]},
+  {"id":42606,"time":"15:05:00","title":"Ligue 1: París Saint-Germain vs Estac Troyes","date":"2026-11-07","sport":"futbol","embeds":[{"name":"BeIN Sports Ñ","lang":"Español","iframe":"https://player.example/paris"}]},
+  {"id":42608,"time":"15:30:00","title":"Primeira Liga: Sporting de Lisboa vs Moreirense","date":"2026-11-07","sport":"futbol","embeds":[{"name":"Dsports +","lang":"Español","iframe":"https://player.example/sporting"}]},
+  {"id":42624,"time":"20:00:00","title":"Liga MX: Toluca vs Monterrey","date":"2026-11-07","sport":"futbol","embeds":[{"name":"TUDN USA","lang":"Español","iframe":"https://player.example/toluca"}]}
+]}

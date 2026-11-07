@@ -92,9 +92,18 @@ internal class StremioWire(private val host: HostConfig) {
         putJsonObject("behaviorHints") { put("defaultVideoId", row.id) }
     }
 
-    fun stream(choice: StreamChoice, localHls: (StreamChoice) -> String) = buildJsonObject {
-        put("name", "${choice.providers.joinToString(" / ")} · ${if (choice.externalUrl.isNotEmpty()) "Website" else "Live"}")
-        put("title", choice.title)
+    fun stream(choice: StreamChoice, now: Long = System.currentTimeMillis(), localHls: (StreamChoice) -> String) = buildJsonObject {
+        val assessment = choice.assessment
+        put("name", "${choice.providers.joinToString(" / ")} · ${if (choice.externalUrl.isNotEmpty()) "Website" else assessment.status.label}")
+        val details = buildList {
+            if (assessment.resolution.isNotBlank()) add(assessment.resolution)
+            assessment.frameRate?.let { add("${String.format(Locale.ROOT, "%.0f", it)}fps") }
+            assessment.bitrate?.let { add("${String.format(Locale.ROOT, "%.1f", it / 1_000_000.0)} Mb") }
+        }
+        put("title", if (choice.externalUrl.isNotEmpty()) choice.title else buildList {
+            if (details.isNotEmpty()) add(details.joinToString(" · "))
+            if (assessment.checkedAtMillis > 0 && assessment.samples > 0) add("${((now - assessment.checkedAtMillis).coerceAtLeast(0) / 1000)}s ago")
+        }.joinToString("\n"))
         if (choice.externalUrl.isNotEmpty()) put("externalUrl", choice.externalUrl) else {
             val hls = isHls(choice)
             put("url", if (hls) localHls(choice) else choice.url)

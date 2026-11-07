@@ -85,7 +85,8 @@ class HttpUpstream private constructor(
             headers.extra.forEach { (key, value) -> request.header(key, value) }
             headers.scopedAuthFor(target)?.let { request.header("X-CSRF-Auth", it) }
             form?.let { values -> request.post(FormBody.Builder().apply { values.forEach { (key, value) -> add(key, value) } }.build()) }
-            val response = client.newCall(request.build()).await()
+            val call = client.newCall(request.build())
+            val response = call.await()
             if (response.code in listOf(301, 302, 303, 307, 308)) {
                 val location = response.header("Location"); response.close()
                 if (redirect == 5 || location == null) throw IOException("Source redirect limit")
@@ -94,7 +95,7 @@ class HttpUpstream private constructor(
             } else {
                 val body = response.body
                 return UpstreamResponse(response.code, response.request.url.toString(),
-                    response.headers.names().associate { it.lowercase() to response.header(it).orEmpty() }, body.byteStream(), response::close)
+                    response.headers.names().associate { it.lowercase() to response.header(it).orEmpty() }, body.byteStream(), cancelRequest = call::cancel, dispose = response::close)
             }
         }
         error("Source redirect limit")

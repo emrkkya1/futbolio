@@ -8,7 +8,7 @@ data class FutbolioConfig(
     val schema: Int = 1,
     val sources: List<SourceConfig> = emptyList(),
     val presentation: PresentationConfig = PresentationConfig(),
-    val defaultsRevision: Int = 4,
+    val defaultsRevision: Int = 5,
 ) {
     companion object
 }

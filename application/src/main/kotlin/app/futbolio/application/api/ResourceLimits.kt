@@ -1,6 +1,6 @@
 package app.futbolio.application.api
 
-/** Runtime policy, not user configuration. Defaults preserve the existing resource envelope. */
+/** Bounded runtime policy, not user configuration. */
 data class ResourceLimits(
     val sources: Int = 8,
     val listingsPerSource: Int = 600,
@@ -25,13 +25,32 @@ data class ResourceLimits(
     val posterEntries: Int = 32,
     val posterRenderSlots: Int = 2,
     val diagnosticEvents: Int = 30,
+    val activeStreamAssessments: Int = 1,
+    val assessedChoicesPerListing: Int = 4,
+    val streamAssessmentMillis: Long = 6_000,
+    val streamAssessmentBatchMillis: Long = 7_000,
+    val prefetchMatches: Int = 4,
+    val prefetchListingsPerBatch: Int = 16,
+    val measuredProvidersPerMatch: Int = 3,
+    val prefetchInitialMatchMillis: Long = 8_000,
+    val prefetchChoicesPerListing: Int = 2,
+    val prefetchCacheMillis: Long = 60_000,
+    val prefetchIntervalMillis: Long = 5_000,
+    val prefetchInterestMillis: Long = 90_000,
+    val prefetchBatchMillis: Long = 45_000,
+    val foregroundQuietMillis: Long = 10_000,
+    val playbackQuietMillis: Long = 30_000,
 ) {
     init {
         require(listOf(sources, listingsPerSource, activeResolutions, pendingResolutions, resolutionCacheEntries,
             alternatePlayers, documentBytes, playlistBytes, mediaBufferBytes, desktopMediaSlots,
-            androidMediaSlots, apiSlots, relayTokens, posterEntries, posterRenderSlots, diagnosticEvents).all { it > 0 })
+            androidMediaSlots, apiSlots, relayTokens, posterEntries, posterRenderSlots, diagnosticEvents,
+            activeStreamAssessments, assessedChoicesPerListing, prefetchMatches, prefetchListingsPerBatch,
+            measuredProvidersPerMatch, prefetchChoicesPerListing).all { it > 0 })
         require(listOf(catalogRefreshMillis, staleCatalogMillis, resolutionCacheMillis,
-            resolutionTimeoutMillis, mediaObjectBytes, mediaDeadlineMillis, relayIdleMillis).all { it > 0 })
+            resolutionTimeoutMillis, mediaObjectBytes, mediaDeadlineMillis, relayIdleMillis,
+            streamAssessmentMillis, streamAssessmentBatchMillis, prefetchCacheMillis, prefetchIntervalMillis,
+            prefetchInterestMillis, prefetchBatchMillis, prefetchInitialMatchMillis, foregroundQuietMillis, playbackQuietMillis).all { it > 0 })
         require(staleCatalogMillis >= catalogRefreshMillis)
         require(pendingResolutions >= activeResolutions)
     }
