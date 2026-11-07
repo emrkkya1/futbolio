@@ -137,7 +137,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ./gradlew.bat :desktop:headlessTest :desktop:packageExe --no-daemon --console=plain
+          ./gradlew.bat :desktop:headlessTest :desktop:createDistributable :desktop:packageExe --no-daemon --console=plain
           if ($LASTEXITCODE -ne 0) { throw "Windows build failed" }
           $version = ((Get-Content gradle.properties | Select-String '^futbolioVersion=').Line -split '=')[1]
           python scripts/desktop/smoke_native.py desktop/build/compose/binaries/main/app/Futbolio/Futbolio.exe --version $version
