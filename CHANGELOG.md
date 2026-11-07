@@ -4,6 +4,22 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
+## 0.4.4
+
+### Added
+- Linux x86_64 AppImage and Windows x86_64 `.exe` installer release builds,
+  including a bundled Java runtime, versioned assets, and SHA-256 checksums.
+- Native desktop packaging and Compose UI smoke tests in CI before publication.
+
+### Changed
+- Match the Android TV dashboard on desktop: flat charcoal palette, green diamond
+  relay control, Kodchasan/Manrope typography, lavender accents, left-side controls
+  and vertically scrolling stream sources on the right. Narrow windows stack the
+  same panels; keyboard/mouse controls, tray, private-LAN settings and provider
+  management remain available.
+- Simplify desktop provider popups to availability, event count and stream fetching,
+  and include the Times and Scores setting.
+
 ## 0.4.3
 
 ### Fixed

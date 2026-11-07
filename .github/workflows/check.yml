@@ -86,9 +86,90 @@ jobs:
           BEFORE_SHA: ${{ github.event.before || '0000000000000000000000000000000000000000' }}
         run: python3 scripts/ci/release_version.py
 
+  desktop-package:
+    name: Desktop ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: Linux AppImage
+            artifact: desktop-linux
+          - os: windows-latest
+            platform: Windows exe
+            artifact: desktop-windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Linux UI tests and bundled runtime
+        if: runner.os == 'Linux'
+        env:
+          SKIKO_RENDER_API: SOFTWARE
+        run: xvfb-run -a bash ./gradlew :desktop:test :desktop:createDistributable --no-daemon --console=plain
+      - name: Package and test AppImage without FUSE
+        if: runner.os == 'Linux'
+        run: |
+          bash scripts/desktop/package_appimage.sh
+          version="$(sed -n 's/^futbolioVersion=//p' gradle.properties)"
+          python3 scripts/desktop/smoke_native.py "dist/desktop/futbolio-v${version}-linux-x86_64.AppImage" --appimage --version "$version"
+      - name: Configure Windows installer toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $wix = Get-ChildItem "${env:ProgramFiles(x86)}\WiX Toolset v3*\bin\candle.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $wix) {
+            choco install wixtoolset --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw "WiX installation failed" }
+            $wix = Get-ChildItem "${env:ProgramFiles(x86)}\WiX Toolset v3*\bin\candle.exe" | Select-Object -First 1
+          }
+          if (-not $wix) { throw "WiX 3 candle.exe is required by JDK 21 jpackage" }
+          $wix.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Windows tests and exe installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./gradlew.bat :desktop:headlessTest :desktop:packageExe --no-daemon --console=plain
+          if ($LASTEXITCODE -ne 0) { throw "Windows build failed" }
+          $version = ((Get-Content gradle.properties | Select-String '^futbolioVersion=').Line -split '=')[1]
+          python scripts/desktop/smoke_native.py desktop/build/compose/binaries/main/app/Futbolio/Futbolio.exe --version $version
+          if ($LASTEXITCODE -ne 0) { throw "Packaged Windows launcher failed" }
+          New-Item -ItemType Directory -Force dist/desktop | Out-Null
+          $installer = @(Get-ChildItem desktop/build/compose/binaries/main/exe/*.exe)
+          if ($installer.Count -ne 1) { throw "Expected exactly one Windows installer" }
+          Copy-Item $installer[0] "dist/desktop/futbolio-v$version-windows-x86_64.exe"
+      - name: Desktop asset checksums
+        shell: python
+        run: |
+          import hashlib
+          from pathlib import Path
+          for path in Path('dist/desktop').iterdir():
+              if path.suffix in ('.AppImage', '.exe'):
+                  path.with_name(path.name + '.sha256').write_text(hashlib.sha256(path.read_bytes()).hexdigest() + '  ' + path.name + '\n')
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/desktop/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.artifact }}-reports
+          path: |
+            desktop/build/reports/
+            desktop/build/compose/logs/
+
   release-apk:
     name: Release versioned Android APK
-    needs: [offline-engine, unit-and-lint, version]
+    needs: [offline-engine, unit-and-lint, desktop-package, version]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.version.outputs.release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -154,3 +235,25 @@ jobs:
           set -euo pipefail
           gh release create "v${VERSION}" "dist/release/futbolio-v${VERSION}.apk" \
             --target "$GITHUB_SHA" --title "Futbolio v${VERSION}" --generate-notes
+
+  release-desktop:
+    name: Publish desktop release assets
+    needs: [version, desktop-package, release-apk]
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: dist
+      - name: Attach tested AppImage, exe and checksums to the Android release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release upload "v${VERSION}" dist/desktop-linux/* dist/desktop-windows/*

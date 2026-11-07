@@ -3,6 +3,10 @@ package app.futbolio.desktop
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -11,6 +15,7 @@ import app.futbolio.application.api.FutbolioConfig
 import app.futbolio.engine.api.Configurations
 import app.futbolio.desktop.ui.DesktopScreen
 import app.futbolio.desktop.ui.theme
+import app.futbolio.desktop.ui.futbolioTypography
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -33,11 +38,13 @@ class DesktopUiTest {
         val host = DesktopHost(Files.createTempDirectory("futbolio-ui-test"))
         try {
             runBlocking { host.saveConfig(FutbolioConfig(sources = Configurations.sources().map { it.copy(enabled = false) })) }
-            compose.setContent { val state by host.ui.collectAsState(); MaterialTheme(colorScheme = theme) { Surface { DesktopScreen(state, host) } } }
-            compose.onNodeWithText("Ready for\nkick-off.").assertExists()
-            compose.onNodeWithText("Copy manifest URL").assertExists()
+            compose.setContent { val state by host.ui.collectAsState(); MaterialTheme(colorScheme = theme, typography = futbolioTypography) { Surface { DesktopScreen(state, host) } } }
+            compose.onNodeWithText("Start Futbolio").assertExists()
             screenshot("desktop-connect")
-            compose.onNodeWithText("Provider settings", useUnmergedTree = true).performScrollTo().performClick()
+            compose.onNodeWithText("How to Install").performClick()
+            compose.onNodeWithText("Copy URL").assertExists()
+            compose.onNodeWithText("Close").performClick()
+            openSetting("Provider settings")
             compose.onNodeWithText("Add provider").assertExists()
             compose.onAllNodesWithText("Edit")[0].performScrollTo().performClick()
             compose.onNodeWithTag("provider-name").performTextReplacement("PPV renamed")
@@ -45,7 +52,7 @@ class DesktopUiTest {
             compose.waitUntil(5000) { host.configuration.value.config.sources.any { it.name == "PPV renamed" } }
             compose.onAllNodesWithText("PPV renamed").onFirst().assertExists()
             screenshot("desktop-providers")
-            compose.onNodeWithText("Provider settings", useUnmergedTree = true).performScrollTo().performClick()
+            openSetting("Provider settings")
             compose.onNodeWithText("Add provider").performScrollTo().performClick()
             compose.onNodeWithTag("provider-name").performTextReplacement("New test source")
             compose.onNodeWithTag("provider-url").performTextReplacement("https://fixture.example/")
@@ -53,11 +60,11 @@ class DesktopUiTest {
             val expectedCount = Configurations.sources().size + 1
             compose.waitUntil(5000) { host.configuration.value.config.sources.size == expectedCount }
             assertEquals(expectedCount, host.configuration.value.config.sources.size)
-            compose.onNodeWithText("Network settings", useUnmergedTree = true).performScrollTo().performClick()
+            openSetting("Network settings")
             compose.onNodeWithText("Network hosting").assertExists()
             screenshot("desktop-network")
             compose.onNodeWithText("Close").performClick()
-            compose.onNodeWithText("Diagnostics", useUnmergedTree = true).performScrollTo().performClick()
+            openSetting("Diagnostics")
             compose.onNodeWithText("Copy diagnostics").assertExists()
             assertTrue(host.error.value.isBlank())
         } finally { host.close() }
@@ -67,14 +74,18 @@ class DesktopUiTest {
         val roots = compose.onAllNodes(isRoot())
         ImageIO.write(roots[roots.fetchSemanticsNodes().lastIndex].captureToImage().toAwtImage(), "png", file)
     }
+    private fun openSetting(name: String) {
+        compose.onNodeWithText("Settings", useUnmergedTree = true).performClick()
+        compose.onNodeWithText(name, useUnmergedTree = true).performScrollTo().performClick()
+    }
 
     @Test fun failedSaveKeepsDialogAndEditedInput() {
         val directory = Files.createTempDirectory("futbolio-ui-save-failure")
         val host = DesktopHost(directory)
         try {
             Files.createDirectory(directory.resolve("providers.json"))
-            compose.setContent { val state by host.ui.collectAsState(); MaterialTheme(colorScheme = theme) { Surface { DesktopScreen(state, host) } } }
-            compose.onNodeWithText("Provider settings", useUnmergedTree = true).performScrollTo().performClick()
+            compose.setContent { val state by host.ui.collectAsState(); MaterialTheme(colorScheme = theme, typography = futbolioTypography) { Surface { DesktopScreen(state, host) } } }
+            openSetting("Provider settings")
             compose.onAllNodesWithText("Edit")[0].performScrollTo().performClick()
             compose.onNodeWithTag("provider-name").performTextReplacement("Unsaved change")
             compose.onNodeWithText("Save", useUnmergedTree = true).performClick()
@@ -98,23 +109,65 @@ class DesktopUiTest {
                 override fun onTestAll() { batches++ }
                 override fun onTest(sourceId: String, listingId: String?) { testedProvider = sourceId }
             }
-            compose.setContent { val state by host.ui.collectAsState(); MaterialTheme(colorScheme = theme) { Surface { DesktopScreen(state.copy(runtime = runtime), actions) } } }
+            compose.setContent { val state by host.ui.collectAsState(); MaterialTheme(colorScheme = theme, typography = futbolioTypography) { Surface { DesktopScreen(state.copy(runtime = runtime), actions) } } }
             compose.onNodeWithTag("relay-toggle").assertHasClickAction().performClick()
-            compose.onAllNodesWithText("Stop relay").assertCountEquals(1)
-            compose.onAllNodesWithText("Start relay").assertCountEquals(0)
-            compose.onNodeWithTag("test-all-providers").performScrollTo().performClick()
+            compose.onAllNodesWithText("Stop Futbolio").assertCountEquals(1)
+            compose.onAllNodesWithText("Start Futbolio").assertCountEquals(0)
+            compose.onNodeWithTag("test-all-providers").performClick()
             assertEquals(1, starts); assertEquals(1, batches)
             val source = host.configuration.value.config.sources.first()
             compose.onNodeWithTag("provider-${source.id}").performClick()
-            compose.onNodeWithText("Configured website").assertExists()
-            compose.onNodeWithText("Test This Provider").performClick()
+            compose.onNodeWithText("Available").assertExists()
+            compose.onNodeWithText("Live Streams").assertExists()
+            compose.onNodeWithText("Test Provider").performClick()
             assertEquals(source.id, testedProvider)
             compose.onNodeWithText("Close").performClick()
-            compose.onNodeWithTag("relay-toggle").performScrollTo()
             screenshot("desktop-dashboard-live")
             compose.onNodeWithTag("relay-toggle").performClick()
-            compose.onNodeWithText("Start relay").assertExists()
+            compose.onNodeWithText("Start Futbolio").assertExists()
             assertEquals(1, stops)
+        } finally { host.close() }
+    }
+
+    @Test fun timesAndScoresCanBeChangedFromTvStyleSettings() {
+        val host = DesktopHost(Files.createTempDirectory("futbolio-times-ui"))
+        try {
+            compose.setContent { val state by host.ui.collectAsState(); MaterialTheme(colorScheme = theme, typography = futbolioTypography) { Surface { DesktopScreen(state, host) } } }
+            compose.onNodeWithText("Settings").performClick()
+            compose.onNodeWithContentDescription("Times and Scores off").performScrollTo().performClick()
+            compose.waitUntil(5000) { !host.configuration.value.config.presentation.showTimesAndScores }
+            compose.onNodeWithContentDescription("Times and Scores off").assertIsSelected()
+            screenshot("desktop-settings")
+        } finally { host.close() }
+    }
+
+    @Test fun narrowWindowKeepsControlsAndScrollableSourcesReachable() {
+        val host = DesktopHost(Files.createTempDirectory("futbolio-narrow-ui"))
+        try {
+            compose.setContent { val state by host.ui.collectAsState(); MaterialTheme(colorScheme = theme, typography = futbolioTypography) {
+                Surface { Box(Modifier.size(640.dp, 720.dp)) { DesktopScreen(state, host) } }
+            } }
+            compose.onNodeWithTag("relay-toggle").assertIsDisplayed()
+            compose.onNodeWithTag("test-all-providers").performScrollTo().assertIsDisplayed()
+            screenshot("desktop-narrow")
+        } finally { host.close() }
+    }
+
+    @Test fun portWarningAndHelpUseTheActualSelectedEndpoint() {
+        val host = DesktopHost(Files.createTempDirectory("futbolio-port-ui"))
+        val selected = DesktopSettings(port = 7001)
+        var copied = ""
+        val actions = object : DesktopActions by host { override fun onCopyManifest() { copied = selected.host().manifest } }
+        try {
+            compose.setContent { val state by host.ui.collectAsState(); MaterialTheme(colorScheme = theme, typography = futbolioTypography) {
+                Surface { DesktopScreen(state.copy(settings = selected, runtime = RuntimeSnapshot(RuntimePhase.RUNNING)), actions) }
+            } }
+            compose.onNodeWithText("Futbolio port changed").assertExists()
+            compose.onNodeWithText("Copy new URL").performClick()
+            assertEquals("http://127.0.0.1:7001/manifest.json", copied)
+            compose.onNodeWithText("Got it").performClick()
+            compose.onNodeWithText("How to Install").performClick()
+            compose.onNodeWithText(selected.host().manifest).assertExists()
         } finally { host.close() }
     }
 }
