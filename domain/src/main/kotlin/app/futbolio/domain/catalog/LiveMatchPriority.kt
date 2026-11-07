@@ -3,7 +3,7 @@ package app.futbolio.domain.catalog
 import app.futbolio.domain.settings.PresentationConfig
 import app.futbolio.domain.match.MatchState
 
-/** Interest heuristic, not a prediction of stream quality. Only already-visible Live Now entries. */
+/** Shared catalogue interest score, not stream quality. Prefetch selection uses visible Live Now entries only. */
 object LiveMatchPriority {
     private val favouriteTeams = setOf("galatasaray", "fenerbahce", "besiktas")
     private val leagues = mapOf(

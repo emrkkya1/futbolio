@@ -47,4 +47,37 @@ class LiveMatchPriorityTest {
         assertEquals("gs", LiveMatchPriority.select(candidates, config, now).first().id)
         assertEquals(LiveMatchPriority.select(candidates, config, now), LiveMatchPriority.select(candidates.reversed(), config, now))
     }
+
+    @Test fun matchCataloguesSortByPriorityBeforeKickoffAndPagination() {
+        for (category in listOf("live", "football", "all-matches", "search", "upcoming")) {
+            val start = if (category == "upcoming") now + 60_000 else now - 60_000
+            val low = (1..120).map { entry("pl-$it", "Premier League", start = start) }
+            val gs = entry("gs", "Süper Lig", "Galatasaray", start + 1000)
+            val cl = entry("cl", "Champions League", start = start + 500)
+            val entries = low + cl + gs
+            val sorted = CatalogSelection.select(entries, CatalogQuery(category), now, config)
+            assertEquals(listOf("gs", "cl"), sorted.take(2).map { it.id }, category)
+            assertEquals(100, sorted.size)
+            assertEquals("cl", CatalogSelection.select(entries, CatalogQuery(category, skip = 1), now, config).first().id)
+            assertEquals(sorted, CatalogSelection.select(entries.reversed(), CatalogQuery(category), now, config))
+        }
+    }
+
+    @Test fun turkishCatalogueAndFilteredSearchRespectPriorityAndConfiguredAliases() {
+        val entries = listOf(entry("other", "Süper Lig", "Trabzonspor"), entry("gs", "Süper Lig", "GS"))
+        val preferences = config.copy(teamAliases = mapOf("GS" to "Galatasaray"))
+        for (query in listOf(CatalogQuery("turkish"), CatalogQuery("search", search = "vs", genre = "Süper Lig"))) {
+            assertEquals(listOf("gs", "other"), CatalogSelection.select(entries, query, now, preferences).map { it.id })
+        }
+    }
+
+    @Test fun equalPriorityUsesLiveStatusThenKickoffAndChannelsKeepTheirOrdering() {
+        val entries = listOf(entry("later", "Premier League", start = now + 120_000),
+            entry("earlier", "Premier League", start = now + 60_000), entry("live", "Premier League"))
+        assertEquals(listOf("live", "earlier", "later"),
+            CatalogSelection.select(entries, CatalogQuery("football"), now, config).map { it.id })
+        val channels = listOf(entry("z", "Süper Lig", "Galatasaray"), entry("a", "Premier League", "Arsenal"))
+            .map { row -> row.copy(listings = row.listings.map { it.copy(kind = ListingKind.CHANNEL) }) }
+        assertEquals(listOf("a", "z"), CatalogSelection.select(channels, CatalogQuery("channels"), now, config).map { it.id })
+    }
 }

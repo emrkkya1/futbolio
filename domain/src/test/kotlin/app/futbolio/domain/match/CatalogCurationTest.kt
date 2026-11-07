@@ -77,10 +77,11 @@ class CatalogCurationTest {
         assertTrue(visible(entry.copy(fixture = fixture(entry.league, now, MatchState.HALFTIME))))
     }
 
-    @Test fun liveMatchesSortAheadOfUpcomingThenByKickoff() {
+    @Test fun higherPriorityUpcomingMatchSortsAheadOfLowerPriorityLiveMatch() {
         val rows = listOf(row("future", start = now + hour), row("live", title = "Arsenal vs Chelsea", start = now - hour))
         val entries = MatchNormalizer.aggregate(rows, emptyList(), options, now)
-        assertEquals("Arsenal vs Chelsea", CatalogSelection.select(entries, CatalogQuery("football"), now).first().title)
+        assertEquals(entries.single { it.starts == now + hour }.id,
+            CatalogSelection.select(entries, CatalogQuery("football"), now).first().id)
     }
 
     @Test fun galatasarayStuttgartConflictingTimesProduceOneEntryWithEveryStream() {

@@ -15,6 +15,8 @@ derived from that version using fixed-width numeric positions.
   during playback.
 
 ### Changed
+- Sort match catalogues by the same descending interest scores used for predictive
+  prefetch, before pagination; equal scores retain live-first and kickoff ordering.
 - Compact Stremio stream entries: provider and connection grade in the name;
   resolution, frame rate, and bitrate on one title line with measurement age below.
   Unmeasured and failed checks stay unrated; playable alternatives remain listed.

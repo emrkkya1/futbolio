@@ -119,7 +119,7 @@ internal class StremioServer(
             if (id != "channels") browsing()
             val extras = if (extra.isNotEmpty()) Web.params(extra) else call.request.queryParameters.entries().associate { it.key to it.value.first() }
             val rows = CatalogSelection.select(if (id == "search") entries.entries(includeHidden = true) else entries.entries(),
-                CatalogQuery(id, Text.plain(extras["search"].orEmpty()), extras["skip"]?.toIntOrNull() ?: 0, extras["genre"].orEmpty()), time.wallMillis())
+                CatalogQuery(id, Text.plain(extras["search"].orEmpty()), extras["skip"]?.toIntOrNull() ?: 0, extras["genre"].orEmpty()), time.wallMillis(), entries.presentation())
             return json(call, buildJsonObject { put("metas", JsonArray(rows.map { wire.meta(it, entries.presentation(), time.wallMillis()) })) })
         }
         if (extra.isNotEmpty()) return text(call, 404, "Not found")

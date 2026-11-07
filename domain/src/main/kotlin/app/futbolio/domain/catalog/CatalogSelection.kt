@@ -2,12 +2,14 @@ package app.futbolio.domain.catalog
 
 import app.futbolio.domain.match.MatchState
 import app.futbolio.domain.text.TextPolicy
+import app.futbolio.domain.settings.PresentationConfig
 
 data class CatalogQuery(val category: String, val search: String = "", val skip: Int = 0, val genre: String = "")
 
 /** Shared query policy; HTTP decoding and HTML cleanup happen before this boundary. */
 object CatalogSelection {
-    fun select(entries: List<CatalogEntry>, query: CatalogQuery, now: Long): List<CatalogEntry> {
+    fun select(entries: List<CatalogEntry>, query: CatalogQuery, now: Long,
+        preferences: PresentationConfig = PresentationConfig()): List<CatalogEntry> {
         val normalized = TextPolicy.normalize(query.search)
         return entries.asSequence().filter { entry ->
             query.category == "provider-tests" || CatalogVisibility.visible(entry, now)
@@ -24,8 +26,9 @@ object CatalogSelection {
         }.filter { entry ->
             (query.genre.isBlank() || entry.league.name == query.genre) &&
                 (normalized.isBlank() || TextPolicy.normalize("${entry.title} ${entry.league.name} ${entry.sources.joinToString()}").contains(normalized))
-        }.sortedWith(compareByDescending<CatalogEntry> { it.state(now) in listOf(MatchState.LIVE, MatchState.HALFTIME) }
-            .thenBy { it.starts }.thenBy { it.title })
+        }.sortedWith(compareByDescending<CatalogEntry> { if (it.channel) 0 else LiveMatchPriority.score(it, preferences) }
+            .thenByDescending { it.state(now) in listOf(MatchState.LIVE, MatchState.HALFTIME) }
+            .thenBy { it.starts }.thenBy { it.title }.thenBy { it.id })
             .drop(query.skip.coerceAtLeast(0)).take(100).toList()
     }
 }
