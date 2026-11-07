@@ -20,7 +20,7 @@ class StreamResolver(
     private val measurementAllowed: () -> Boolean = { true },
 ) {
     private data class Cached(val choices: List<StreamChoice>, val until: Long, val attempted: Set<Int> = emptySet(),
-        val firstMeasurement: Long = Long.MAX_VALUE, val assessmentUntil: Long = 0)
+        val firstMeasurement: Long = Long.MAX_VALUE, val assessmentUntil: Long = 0, val minimum: List<StreamChoice> = choices)
     private class Pending(@Volatile var foreground: Boolean, val prepareOnly: Boolean = false, val choiceLimit: Int? = null) {
         lateinit var task: Deferred<List<StreamChoice>>
         val prepared = CompletableDeferred<Unit>()
@@ -30,10 +30,12 @@ class StreamResolver(
         var preparedUntil = Long.MAX_VALUE
         var assessmentUntil = 0L
         @Volatile var choices: List<StreamChoice> = emptyList()
+        var minimum: List<StreamChoice> = emptyList()
     }
     private val cache = LinkedHashMap<String, Cached>(32, .75f, true)
     private val pending = mutableMapOf<String, Pending>()
     private val assessments = mutableSetOf<Job>()
+    private var protectedIds = emptySet<String>()
     private var generation = 0L
     private var foregroundUntil = 0L
     private val permits = Semaphore(limits.activeResolutions)
@@ -41,6 +43,13 @@ class StreamResolver(
 
     @Synchronized fun revision(): Long = generation
     @Synchronized fun hasFresh(item: Listing) = cache[item.id]?.until?.let { it > time.monotonicMillis() } == true
+    @Synchronized fun hasPreparedResult(item: Listing, expectedRevision: Long): Boolean = generation == expectedRevision && item.id in cache
+    /** Scheduler bookkeeping only: an expired observation is never a playback response. */
+    @Synchronized fun minimumObservation(item: Listing, expectedRevision: Long): List<StreamChoice> =
+        if (generation == expectedRevision) cache[item.id]?.minimum.orEmpty() else emptyList()
+    @Synchronized fun protectPrepared(items: List<Listing>) {
+        protectedIds = items.map { it.id }.take(limits.resolutionCacheEntries).toSet()
+    }
     @Synchronized fun needsRefresh(item: Listing): Boolean = pending[item.id]?.task?.isActive != true &&
         (cache[item.id]?.until ?: 0) <= time.monotonicMillis() + limits.prefetchRefreshAheadMillis
     @Synchronized fun hasAssessment(item: Listing, choices: Int = 1): Boolean {
@@ -49,7 +58,7 @@ class StreamResolver(
             .filter { it.value.externalUrl.isEmpty() && isHls(it.value) }.take(choices).all { it.index in cached.attempted }
     }
     private fun currentChoices(cached: Cached): List<StreamChoice> = if (cached.assessmentUntil > 0 && cached.assessmentUntil <= time.monotonicMillis())
-        cached.choices.map { it.copy(assessment = StreamAssessment()) } else cached.choices
+        cached.minimum else cached.choices
 
     /** One immutable, revision-fenced snapshot; no network or measurement joins. */
     @Synchronized fun preparedSnapshot(items: List<Listing>, expectedRevision: Long): List<StreamChoice>? {
@@ -76,7 +85,10 @@ class StreamResolver(
             // request instead of dropping a playable source to await more data.
             items.zip(prepared).flatMap { (item, choices) ->
                 val cached = cache[item.id]?.takeIf { it.until > time.monotonicMillis() }
-                (cached?.let(::currentChoices) ?: choices.map { it.copy(assessment = StreamAssessment()) })
+                (cached?.let(::currentChoices) ?: choices.map { choice ->
+                    val minimum = cache[item.id]?.minimum?.firstOrNull { it.url == choice.url && it.headers == choice.headers && it.session === choice.session }
+                    minimum ?: choice.copy(assessment = StreamAssessment())
+                })
                     .map { it.copy(providers = listOf(item.source.name)) }
             }
         }
@@ -90,6 +102,20 @@ class StreamResolver(
 
     /** Shared work is promoted when selected; speculative work for other matches yields immediately. */
     fun prioritize(items: List<Listing>, expectedRevision: Long? = null) = foregroundInterest(items.map { it.id }, expectedRevision)
+
+    /** A new cold user selection owns network capacity, including over older selections. */
+    fun preemptFor(items: List<Listing>, expectedRevision: Long) {
+        val obsolete = synchronized(this) {
+            if (generation != expectedRevision) return
+            val selected = items.map { it.id }.toSet()
+            foregroundUntil = time.monotonicMillis() + limits.foregroundQuietMillis
+            val unrelated = pending.filterKeys { it !in selected }
+            unrelated.keys.forEach(pending::remove)
+            pending.values.forEach { it.foreground = true }
+            unrelated.values.map { it.task } + assessments.toList()
+        }
+        obsolete.forEach { it.cancel() }
+    }
 
     private fun foregroundInterest(ids: List<String>, expectedRevision: Long? = null) {
         val obsolete = synchronized(this) {
@@ -159,6 +185,7 @@ class StreamResolver(
                 val epoch = generation
                 val work = Pending(foreground = !background, prepareOnly = prepareOnly, choiceLimit = measurementChoices)
                 if (measurementChoices != null && cached != null) {
+                    work.minimum = cached.minimum
                     if (cached.assessmentUntil > time.monotonicMillis()) {
                         work.attempted += cached.attempted
                         work.firstMeasurement = cached.firstMeasurement
@@ -172,6 +199,7 @@ class StreamResolver(
                             withTimeoutOrNull(limits.resolutionTimeoutMillis) { permits.withPermit { load(item) } }
                                 ?: listOf(fallback).also { events.event("Resolution ${item.source.id}: deadline reached") }
                         if (measurementChoices == null) {
+                            work.minimum = resolved.toList()
                             work.preparedUntil = time.monotonicMillis() + limits.resolutionCacheMillis
                             // Carry evidence only for the exact same URL, credentials and session.
                             // Renewing extraction must not reset sample age or resurrect stale grades.
@@ -180,11 +208,25 @@ class StreamResolver(
                                     val old = previous.choices.withIndex().firstOrNull { (_, old) ->
                                         choice.url.isNotBlank() && choice.url == old.url && choice.headers == old.headers && choice.session === old.session
                                     }
-                                    if (old != null) {
+                                    val declared = choice.assessment
+                                    val evidence = old?.value?.assessment
+                                    val conflict = evidence != null && (
+                                        (declared.resolution.isNotBlank() && evidence.resolution.isNotBlank() && declared.resolution != evidence.resolution) ||
+                                        (declared.bitrate != null && evidence.bitrate != null && declared.bitrate != evidence.bitrate) ||
+                                        (declared.frameRate != null && evidence.frameRate != null && declared.frameRate != evidence.frameRate))
+                                    if (old != null && !conflict) {
                                         if (old.index in previous.attempted) work.attempted += index
                                         work.firstMeasurement = previous.firstMeasurement
                                         work.assessmentUntil = previous.assessmentUntil
-                                        choice.copy(assessment = old.value.assessment)
+                                        choice.copy(assessment = old.value.assessment.copy(
+                                            resolution = declared.resolution.ifBlank { old.value.assessment.resolution },
+                                            resolutionMeasured = if (declared.resolution.isNotBlank()) declared.resolutionMeasured else old.value.assessment.resolutionMeasured,
+                                            frameRate = declared.frameRate ?: old.value.assessment.frameRate,
+                                            bitrate = declared.bitrate ?: old.value.assessment.bitrate,
+                                            bitrateEstimated = if (declared.bitrate != null) declared.bitrateEstimated else old.value.assessment.bitrateEstimated,
+                                            codecs = declared.codecs.ifBlank { old.value.assessment.codecs },
+                                            adaptive = declared.adaptive || old.value.assessment.adaptive,
+                                        ))
                                     } else choice
                                 }
                             }
@@ -231,8 +273,10 @@ class StreamResolver(
         // Link lifetime and measurement freshness are independent. Probing never
         // extends a signed URL's lifetime; refreshing a URL never resets sample age.
         if (work.preparedUntil <= time.monotonicMillis()) return@synchronized
-        cache[item.id] = Cached(choices.toList(), work.preparedUntil, work.attempted.toSet(), work.firstMeasurement, work.assessmentUntil)
-        while (cache.size > limits.resolutionCacheEntries) cache.remove(cache.keys.first())
+        cache[item.id] = Cached(choices.toList(), work.preparedUntil, work.attempted.toSet(), work.firstMeasurement, work.assessmentUntil, work.minimum)
+        while (cache.size > limits.resolutionCacheEntries) {
+            cache.remove(cache.keys.firstOrNull { it !in protectedIds } ?: cache.keys.first())
+        }
     }
 
     private suspend fun load(item: Listing): List<StreamChoice> {
@@ -297,6 +341,7 @@ class StreamResolver(
         val obsolete = synchronized(this) {
             generation++
             cache.clear()
+            protectedIds = emptySet()
             pending.values.map { it.task }.also { pending.clear() }
         }
         obsolete.forEach { it.cancel() }

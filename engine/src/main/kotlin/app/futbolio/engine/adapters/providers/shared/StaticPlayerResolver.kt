@@ -5,6 +5,7 @@ import app.futbolio.engine.*
 import app.futbolio.application.ports.*
 import app.futbolio.domain.catalog.*
 import app.futbolio.application.resolution.deduplicateStreams
+import app.futbolio.engine.adapters.hls.HlsDeclaredMetadata
 
 import kotlinx.coroutines.*
 
@@ -30,7 +31,8 @@ internal class StaticPlayerResolver(
     private suspend fun page(url: String, parent: String, depth: Int, seen: MutableSet<String>): List<StreamChoice> {
         if (depth > 2 || !seen.add(url)) return emptyList()
         val doc = net.text(url, SourceHeaders(parent))
-        if (doc.text.removePrefix("\uFEFF").trimStart().startsWith("#EXTM3U")) return listOf(StreamChoice("", doc.url, SourceHeaders(parent, Web.origin(parent)), mediaType = "hls"))
+        if (doc.text.removePrefix("\uFEFF").trimStart().startsWith("#EXTM3U")) return listOf(StreamChoice("", doc.url,
+            SourceHeaders(parent, Web.origin(parent)), mediaType = "hls", assessment = HlsDeclaredMetadata.read(doc.text)))
         val referer = if (Regex("<meta[^>]*name=['\"]referrer['\"][^>]*content=['\"]origin['\"]", RegexOption.IGNORE_CASE).containsMatchIn(doc.text)) Web.origin(doc.url) + "/" else doc.url
         val streams = extract(doc.text, doc.url).map { StreamChoice("", it, SourceHeaders(referer, Web.origin(doc.url))) }
         if (streams.isNotEmpty()) return streams

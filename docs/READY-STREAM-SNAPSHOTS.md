@@ -29,19 +29,19 @@ dropping them to wait for additional information.
 
 ## Background maintenance
 
-Link maintenance and sampling have separate scheduling lanes. The maintenance lane
-checks every five seconds and on browsing/provider/selection events. It dispatches
-at most two refreshes at a time, waking again when one finishes rather than waiting
-for an entire slow provider batch. Links are refreshed within ten seconds of their
-20-second cache expiry, while old links remain readable until their actual expiry.
-An in-flight sample never blocks ready-cache reads.
+The [minimum-first scheduler](PREDICTIVE-STREAM-PREFETCH.md) finishes all providers
+for the priority four before optional enrichment, then expands minimum coverage to
+other live matches. Due link refreshes outrank the next probe. Maintenance considers
+links within ten seconds of their 20-second expiry, with at most two concurrent
+extractions; an in-flight sample never blocks ready-cache reads.
 
 Sampling retains the three-distinct-provider cap per match, serialized bandwidth
-checks, per-check/batch deadlines, and the four-match priority shortlist. A selected
-match takes the first shortlist slot. Speculation is limited to the browsing-interest
-window and pauses during playback and the post-playback quiet period. A new cold
-selection may still extract its links while another stream is playing; it does not
-start a bandwidth test.
+checks, per-check/active-probe budgets, and the four-match priority shortlist. A cold
+selection overrides unrelated preparation and probing, without discarding completed
+cache entries. Idle maintenance continues until stopped/reset or paused for playback;
+there is no 90-second interest cutoff. After playback's quiet period it resumes
+automatically. A cold selection may still extract links while another stream is
+playing; it does not start a bandwidth test.
 
 ## Freshness and safety
 
@@ -52,8 +52,8 @@ start a bandwidth test.
   headers and playback-session instance all still match. Refreshing links does
   not reset sample timestamps or download the same fresh samples again.
 - Old measurements expire independently (at most 60 seconds from their oldest
-  observation); fresh links remain usable, but expired grades disappear until
-  another check supplies evidence.
+  observation); fresh links and their free minimum metadata remain usable, but
+  expired grades disappear until another check supplies evidence.
 - Configuration changes invalidate the revision and cancel obsolete extraction
   without returning old configuration data. Work and cache size remain bounded.
 

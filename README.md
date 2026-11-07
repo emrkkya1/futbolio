@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/futbolio-logo.svg" alt="Futbolio" width="320">
+  <img src="docs/assets/futbolio-logo.svg" alt="Futbolio — diamond F mark and Kodchasan wordmark" width="320">
 </p>
 
 Futbolio is a companion app for Stremio that adds football matches and sports channels from supported third-party providers. It organizes listings into catalogs and passes available streams to Stremio for playback, with a focus on Turkish football. **You watch in Stremio and keep Futbolio running in the background.** Futbolio does not provide broadcasts or play video itself.
@@ -38,7 +38,8 @@ This address refers to the Android device itself, not your PC. Opening it on ano
 - Match posters with team crests, competition names, and kickoff times. Matching provider listings are grouped into one match with multiple sources.
 - Scores and match minutes when a listing can be matched to ESPN data. Confirmed ended matches are hidden; other live-status labels may be kickoff-based estimates.
 - Compact stream connection snapshots, with stronger measured options listed first: provider and grade, resolution/frame rate/bitrate when available, and measurement age. Checks are bounded and cached; they are not a freeze-free playback guarantee. See [stream metadata](docs/stream-metadata.md).
-- Background checks prepare up to four likely Live Now matches, prioritizing Galatasaray/Fenerbahçe/Beşiktaş and major competitions. Measured connection levels are **GOOD / MEDIUM / SLOW**; incomplete checks stay unrated. Probing pauses during playback. See [predictive prefetch](docs/PREDICTIVE-STREAM-PREFETCH.md).
+- Prepare complete clickable stream lists for the four highest-interest live matches before optional measurements, then warm other live matches while idle. User selections preempt unrelated work; probes pause during playback. **GOOD / MEDIUM / SLOW** grades are optional, never a reason to delay or hide a stream. See [minimum-first preparation](docs/PREDICTIVE-STREAM-PREFETCH.md).
+- Catalogue order and preparation share [weighted match-interest scoring](docs/MATCH-PRIORITY.md): dominant Galatasaray/Fenerbahçe/Beşiktaş preferences, competition importance, both clubs, major matchups and modest verified live urgency. Scoring needs no extra network requests.
 
 ### Example posters
 

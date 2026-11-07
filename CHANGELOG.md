@@ -4,9 +4,24 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
-## Unreleased
+## 0.4.5
 
 ### Changed
+- Align the README logo with the apps' solid green diamond-F and bundled Kodchasan
+  wordmark; update Android adaptive/TV icons and enable adaptive launcher resources.
+- Replace the simple favourite/league ladder with weighted interest scoring shared
+  by catalogue order and preparation: dominant GS/FB/BJK preferences, competition,
+  both clubs' local prominence, major matchups and modest verified live urgency.
+  Missing fixture details are neutral; ranking makes no network requests.
+- Order automatic stream preparation into discovery and ESPN statuses, complete
+  minimum sets for the four priority live matches, priority enrichment, then
+  minimum sets for other live matches while idle. Every targeted provider is
+  attempted; failures/timeouts do not create an endless barrier.
+- Cold user selections preempt unrelated fetching and probing, preserve completed
+  results, and return every playable option without waiting for extra information.
+- Keep minimum metadata already present in fetched responses without another
+  request, protect priority cache entries during expansion, and resume bounded
+  idle maintenance after playback rather than stopping after a 90-second window.
 - Always return every playable provider option without waiting for stream metadata
   or bandwidth checks; include whatever information is already available.
 - Refresh prepared links independently in the background and reuse matching fresh

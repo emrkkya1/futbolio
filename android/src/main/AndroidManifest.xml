@@ -11,7 +11,7 @@
         <package android:name="com.stremio.one" />
         <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="stremio" /></intent>
     </queries>
-    <application android:name=".bootstrap.FutbolioApplication" android:label="Futbolio" android:icon="@drawable/ic_futbolio" android:roundIcon="@drawable/ic_futbolio" android:banner="@drawable/tv_banner"
+    <application android:name=".bootstrap.FutbolioApplication" android:label="Futbolio" android:icon="@mipmap/ic_futbolio" android:roundIcon="@mipmap/ic_futbolio" android:banner="@drawable/tv_banner"
         android:theme="@style/AppTheme" android:allowBackup="false" android:usesCleartextTraffic="true" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>

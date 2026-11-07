@@ -172,7 +172,7 @@ class ReadyStreamSnapshotTest {
         warmer.browsing()
         warmer.warmOnce()
         assertEquals(3, checked.size)
-        assertTrue(checked.none { it == "${listings.first().page}.m3u8" })
+        assertTrue(checked.none { it == "${listings.last().page}.m3u8" })
         warmer.warmOnce()
         assertEquals(3, checked.size, "Later readiness order cannot consume a fourth fresh provider slot")
     }
@@ -258,5 +258,38 @@ class ReadyStreamSnapshotTest {
         assertEquals("1920x1080", response.first().assessment.resolution)
         assertEquals(ConnectionStatus.UNKNOWN, response.last().assessment.status)
         measurement.await()
+    }
+
+    @Test fun freeMinimumMetadataSurvivesExpirationOfAnOldConnectionGrade() = runTest {
+        val listing = row("declared")
+        val declared = StreamAssessment(resolution = "1280x720", bitrate = 1_000_000)
+        val resolver = StreamResolver(backgroundScope, net, directory { listOf(choice(it).copy(assessment = declared)) }, clock(testScheduler),
+            assessor = StreamAssessor { declared.copy(status = ConnectionStatus.GOOD, samples = 2) })
+        resolver.prefetch(listing, resolver.revision())
+        repeat(5) { advanceTimeBy(10_000); resolver.refreshPrepared(listing, resolver.revision()) }
+        advanceTimeBy(10_000)
+        val snapshot = resolver.preparedSnapshot(listOf(listing), resolver.revision())!!.first()
+        assertEquals(ConnectionStatus.UNKNOWN, snapshot.assessment.status)
+        assertEquals("1280x720", snapshot.assessment.resolution)
+        assertEquals(1_000_000L, snapshot.assessment.bitrate)
+        assertEquals(0, snapshot.assessment.samples)
+    }
+
+    @Test fun changedMinimumDeclarationsInvalidateIncompatibleOldConnectionEvidence() = runTest {
+        val listing = row("adaptive")
+        var resolution = "1280x720"
+        val resolver = StreamResolver(backgroundScope, net, directory {
+            listOf(choice(it).copy(assessment = StreamAssessment(resolution = resolution)))
+        }, clock(testScheduler), assessor = StreamAssessor {
+            StreamAssessment(ConnectionStatus.GOOD, resolution = resolution, samples = 2)
+        })
+        resolver.prefetch(listing, resolver.revision())
+        resolution = "1920x1080"
+        advanceTimeBy(10_000)
+        resolver.refreshPrepared(listing, resolver.revision())
+        val snapshot = resolver.preparedSnapshot(listOf(listing), resolver.revision())!!.first()
+        assertEquals("1920x1080", snapshot.assessment.resolution)
+        assertEquals(ConnectionStatus.UNKNOWN, snapshot.assessment.status)
+        assertFalse(resolver.hasAssessment(listing))
     }
 }
