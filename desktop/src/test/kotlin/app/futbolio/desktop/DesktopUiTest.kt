@@ -34,6 +34,29 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalTestApi::class)
 class DesktopUiTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun relayPreparationFillsDiamondAndRemainsStoppableUntilFirstMatchReady() {
+        var runtime by mutableStateOf(RuntimeSnapshot(RuntimePhase.RUNNING, preparation = RelayPreparation(.5f)))
+        var stops = 0
+        compose.setContent {
+            MaterialTheme(colorScheme = theme, typography = futbolioTypography) {
+                Surface { Box(Modifier.size(720.dp, 280.dp)) {
+                    app.futbolio.desktop.ui.RelayHero(runtime) { stops++ }
+                } }
+            }
+        }
+        compose.onAllNodesWithText("Relay is starting, please wait…").assertCountEquals(2)
+        compose.onNodeWithText("Relay is live").assertDoesNotExist()
+        compose.onNodeWithTag("relay-toggle").assertIsEnabled().performClick()
+        assertEquals(1, stops)
+        screenshot("desktop-relay-preparing")
+        compose.runOnIdle { runtime = runtime.copy(preparation = RelayPreparation(1f, true)) }
+        compose.onNodeWithText("Relay is live").assertExists()
+        compose.onNodeWithText("Stop Futbolio").assertExists()
+        screenshot("desktop-relay-ready")
+        compose.runOnIdle { runtime = RuntimeSnapshot() }
+        compose.onNodeWithText("Relay is stopped").assertExists()
+        compose.onNodeWithText("Start Futbolio").assertExists()
+    }
     @Test fun providerCrudAndNavigation() {
         val host = DesktopHost(Files.createTempDirectory("futbolio-ui-test"))
         try {
@@ -104,7 +127,8 @@ class DesktopUiTest {
             var testedProvider = ""
             val actions = object : DesktopActions by host {
                 override fun onStart() { starts++; runtime = RuntimeSnapshot(RuntimePhase.RUNNING,
-                    providers = host.configuration.value.config.sources.map { ProviderStatus(it.id, it.name, it.enabled, ok = true, count = 24) }) }
+                    providers = host.configuration.value.config.sources.map { ProviderStatus(it.id, it.name, it.enabled, ok = true, count = 24) },
+                    preparation = RelayPreparation(1f, true)) }
                 override fun onStop() { stops++; runtime = RuntimeSnapshot() }
                 override fun onTestAll() { batches++ }
                 override fun onTest(sourceId: String, listingId: String?) { testedProvider = sourceId }

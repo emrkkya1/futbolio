@@ -1,6 +1,7 @@
 package app.futbolio.application.resolution
 
 import app.futbolio.application.api.ResourceLimits
+import app.futbolio.application.api.RelayPreparation
 import app.futbolio.application.ports.*
 import app.futbolio.domain.catalog.CatalogEntry
 import app.futbolio.domain.catalog.LiveMatchPriority
@@ -8,6 +9,8 @@ import app.futbolio.domain.catalog.Listing
 import app.futbolio.domain.settings.PresentationConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 
@@ -50,6 +53,13 @@ class LiveStreamPrefetcher(
     private val providerSlots = mutableMapOf<String, LinkedHashMap<String, Listing>>()
     private val expanded = mutableMapOf<String, Set<String>>()
     private val wake = Channel<Unit>(Channel.CONFLATED)
+    private val mutablePreparation = MutableStateFlow(RelayPreparation())
+    private var preparationGeneration = 0L
+    val preparation = mutablePreparation.asStateFlow()
+    private fun preparationProgress(revision: Long, epoch: Long, progress: Float, ready: Boolean = false) = synchronized(this) {
+        if (!enabled || preparationGeneration != epoch || resolver.revision() != revision || mutablePreparation.value.ready) return@synchronized
+        mutablePreparation.value = RelayPreparation(maxOf(mutablePreparation.value.progress, progress).coerceIn(0f, 1f), ready)
+    }
     @Volatile var phase = PreparationPhase.IDLE
         private set
     @Volatile var lastReport = PrefetchBatchReport()
@@ -116,6 +126,7 @@ class LiveStreamPrefetcher(
         if (!allowed()) return@coroutineScope emptyList()
         val revision = resolver.revision()
         val started = time.monotonicMillis()
+        val preparationEpoch = synchronized(this@LiveStreamPrefetcher) { preparationGeneration }
         val progress = Any()
         var selected = emptyList<CatalogEntry>()
         val timings = linkedMapOf<String, MatchPrefetchTiming>()
@@ -155,10 +166,12 @@ class LiveStreamPrefetcher(
                 initialize() // Engine: bounded provider discovery, then fail-open ESPN scoreboard.
                 checkAllowed(revision)
                 synchronized(this@LiveStreamPrefetcher) { initializedRevision = revision }
+                preparationProgress(revision, preparationEpoch, .1f)
             }
             val catalogue = snapshot()
             val live = LiveMatchPriority.select(catalogue, preferences(), time.wallMillis(), Int.MAX_VALUE)
             checkAllowed(revision)
+            preparationProgress(revision, preparationEpoch, .2f)
             selected = live.take(limits.prefetchMatches)
             val nextPlan = Plan(revision, selected.map { it.listings.map(Listing::id) })
             synchronized(this@LiveStreamPrefetcher) {
@@ -184,7 +197,9 @@ class LiveStreamPrefetcher(
                 if (!done) minimum(entry, remember = true)
                 if (synchronized(this@LiveStreamPrefetcher) { entry.listings.any { it.id !in minimumDone } }) return@async
                 synchronized(progress) { timings[entry.id] = timings.getValue(entry.id).copy(minimumReadyMillis = time.monotonicMillis() - started) }
+                preparationProgress(revision, preparationEpoch, .2f + .55f * selected.takeWhile { it.id != entry.id }.plus(entry).size / selected.size)
             }
+            if (selected.isEmpty()) preparationProgress(revision, preparationEpoch, 1f, ready = true)
 
             // A finite maintenance pass. Expiry does not undo completed phase barriers;
             // rechecking freshness forever would starve enrichment and expansion.
@@ -246,9 +261,15 @@ class LiveStreamPrefetcher(
                     if (completed == null) break@enrichment
                     checkAllowed(revision)
                     synchronized(this@LiveStreamPrefetcher) { enrichmentDone += listing.id }
+                    if (entry.id == selected.firstOrNull()?.id) {
+                        val completedSlots = synchronized(this@LiveStreamPrefetcher) { slots.values.count { it.id in enrichmentDone } }
+                        preparationProgress(revision, preparationEpoch, .75f + .24f * completedSlots / slots.size.coerceAtLeast(1))
+                    }
                 }
                 if (synchronized(this@LiveStreamPrefetcher) { slots.values.all { it.id in enrichmentDone } })
                     synchronized(this@LiveStreamPrefetcher) { entriesEnriched += entry.id }
+                if (entry.id == selected.firstOrNull()?.id && synchronized(this@LiveStreamPrefetcher) { entry.id in entriesEnriched })
+                    preparationProgress(revision, preparationEpoch, 1f, ready = true)
             }
             // Initial priority enrichment must have completed (including failed/timed-out
             // attempts) before expansion. Later refreshes cannot restart that barrier.
@@ -292,6 +313,8 @@ class LiveStreamPrefetcher(
     fun reset() {
         val active = synchronized(this) {
             enabled = false; initializedRevision = null; plan = null; requested = null
+            mutablePreparation.value = RelayPreparation()
+            preparationGeneration++
             minimumDone.clear(); enrichmentDone.clear(); entriesEnriched.clear(); providerSlots.clear(); expanded.clear()
             priorityListings = emptyList()
             listOfNotNull(batch, foreground).also { foreground = null }

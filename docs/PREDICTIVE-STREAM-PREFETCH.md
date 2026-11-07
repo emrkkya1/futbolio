@@ -40,6 +40,25 @@ The shared weighted [interest score](MATCH-PRIORITY.md), not stream quality, cho
 both catalogue order and preparation priority. Only existing catalogue/ESPN data
 and local rules are used; ranking performs no network calls.
 
+## Dashboard startup readiness (0.4.6)
+
+The listener still starts immediately and the phases above are unchanged. A
+separate observable UI-readiness state keeps the Android/mobile/TV and desktop
+dashboard at “Relay is starting, please wait…” during discovery, all priority
+minimum sets, and the first ranked match's initial enrichment attempts. At that
+match's completion the status changes to “Relay is live”; other matches continue
+normally. The diamond starts white and fills green at completed work milestones,
+with short animated transitions, not an elapsed-time countdown or ETA.
+
+Readiness is latched across later idle passes and playback pauses, reset on
+stop/configuration invalidation, and revision-fenced. No live matches finish
+readiness after discovery/status classification. Missing playable/measureable
+options and failed/timed-out measurements count as terminal attempts, not promises
+of good grades. An interrupted initial pass remains preparing until its first
+match finishes on a later pass. There is no new global startup timeout or forced
+sleep, so slow providers can keep the UI preparing longer. The running server and
+its stop control remain available during preparation.
+
 ## User selection is an override
 
 If the selected match's complete minimum set is fresh, return all options immediately
