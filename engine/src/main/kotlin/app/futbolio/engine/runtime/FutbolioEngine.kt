@@ -80,7 +80,8 @@ internal class FutbolioEngine(
         override fun finished() { pauseChecks(); activity.finished() }
     }
     private val relay = MediaRelay(net, tokens, diagnostics, measuredActivity, limits, io)
-    private val server = StremioServer(host, this, catalog, entries, resolver, workbench, fixtures, posters, relay, tokens, diagnostics, limits, time, prefetcher::browsing)
+    private val server = StremioServer(host, this, catalog, entries, resolver, workbench, fixtures, posters, relay, tokens, diagnostics,
+        limits, time, prefetcher::browsing, prefetcher::selected)
 
     init { scope.launch { catalog.changes.collect { prefetcher.changed() } } }
 

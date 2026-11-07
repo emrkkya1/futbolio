@@ -58,18 +58,17 @@ The ranking is applied before the catalog's pagination limit.
 
 ## Foreground selection and freshness
 
-Foreground and background resolution share single-flight work. The stream endpoint
-promotes **all** providers belonging to the selected match before requesting them,
-so the first provider request cannot accidentally cancel another selected provider.
-Unrelated speculation is canceled and immediately releases pending-admission slots.
-New speculative work waits through a ten-second foreground quiet period.
+Foreground and background resolution share single-flight work. A cold selection
+promotes preparation of **all** its providers and cancels unrelated speculation,
+immediately releasing pending-admission slots. Ready snapshot reads do not cancel
+measurements or wait for a foreground quiet period.
 
-Ready cached provider results return without new extraction or speed probes. A warmed
+Ready cached provider results return without awaiting extraction or speed probes. A warmed
 measurement can be reused for at most 60 seconds from the oldest observed sample,
 using monotonic time for expiration. Check age is visible. Warming does not silently
-keep a result fresh without new measurements. Fallback/unmeasured results retain the
-ordinary 20-second cache. A warm-up promoted while still pending uses foreground
-cache policy when it completes.
+keep evidence fresh without new measurements. All prepared links have their own
+20-second cache lifetime, proactively refreshed independently of sampling. A fresh
+link can survive expiration of its old grade; a fresh grade never extends an old URL.
 
 Preparation and assessment have separate APIs and lifecycles. Progressive playlist/
 sample observations update only the matching revision and prepared URL/session's
@@ -78,22 +77,21 @@ queue. Expired prepared links are not measured, silently re-extracted by the mea
 stage, or resurrected as fresh cache entries. Completed first-option checks are reused
 when a second option is assessed.
 
-Selecting an in-flight warm-up does not inherit its 45-second speculative measurement
-deadline: after preparation, foreground waits at most the normal seven-second
-assessment budget, then returns available choices and completed measurements. An
-unknown or partially prepared match can still require normal provider resolution.
-**A few warm provider listings are not a guarantee that the entire match response
-is instant**: every uncached provider in that match still needs resolution. This is
-why preparation favours the highest-interest match. A slow extraction can still delay
-the complete list. Stremio does not push later cached grades into an already-rendered
-page. The online test reports first playable links, first grade, first GOOD result,
-fresh-listing count, and fully-warm-match count separately from total batch duration.
+Selecting an in-flight warm-up never inherits its measurement deadline. Prepared
+choices return immediately once every provider's link results are available; cold
+providers still require normal extraction. Never omit playable alternatives just
+because their metadata is missing or another provider is already ready. Stremio does not push later
+cached grades/providers into an already-rendered page. The online test reports first
+playable links, first grade, first GOOD result, fresh-listing count, and fully-warm-match
+count separately from total batch duration.
 
-The foreground stream endpoint also prepares links separately, retains every playable
-provider, and samples at most three distinct available HLS providers on a cold request.
-Fresh prior attempts return without another benchmark. Expiry during another provider's
-slow preparation never causes an already-resolved choice to be dropped merely because
-it can no longer be measured. Diagnostic workbench checks are separate from match budgets.
+The foreground stream endpoint now reads [ready snapshots](READY-STREAM-SNAPSHOTS.md)
+instead of waiting for sampling. Cold providers still require normal preparation
+so every playable stream is included; subsequent requests pick up progressively
+available metadata without waiting for it. Link maintenance runs independently of sampling
+and refreshes before expiry. Fresh evidence can be reused for exactly matching URLs,
+headers and session instances without resetting its age. Workbench diagnostics remain
+separate from match budgets.
 
 URLs and credentials remain scoped to their original listing/session; no token/query
 stripping is used to pretend a newly resolved stream is the previously measured one.

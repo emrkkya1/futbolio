@@ -43,6 +43,7 @@ internal class StremioServer(
     private val limits: ResourceLimits,
     private val time: TimeSource,
     private val browsing: () -> Unit = {},
+    private val selected: (CatalogEntry) -> Unit = {},
 ) {
     private val guard = RequestGuard(host)
     private val wire = StremioWire(host)
@@ -135,22 +136,13 @@ internal class StremioServer(
         if (extra.isNotEmpty()) return text(call, 404, "Not found")
         val resolverRevision = resolver.revision()
         val row = workbench.entries().find { it.id == id } ?: entries.selected(id, if (resource == "meta") 350 else 0)
+        if (row != null && !id.startsWith("fut:probe:")) selected(row)
         if (resource == "meta") return json(call, buildJsonObject { put("meta", row?.let { wire.meta(it, entries.presentation(), time.wallMillis()) } ?: JsonNull) })
-        row?.let { resolver.prioritize(it.listings, resolverRevision) }
-        val choices = if (row == null) emptyList() else if (id.startsWith("fut:probe:")) workbench.streams(id) else coroutineScope {
-            val preparationSlots = Semaphore(limits.activeResolutions)
-            val prepared = row.listings.map { listing -> async {
-                listing to preparationSlots.withPermit { resolver.prepare(listing, resolverRevision, background = false) }
-            } }.awaitAll()
-            // Any fresh measured evidence is immediately useful. Do not make a warm hit wait
-            // for more benchmarking; Stremio cannot update the same response later anyway.
-            val alreadyChecked = prepared.any { (listing, choices) -> choices.any { isHls(it) && it.url.isNotBlank() } && resolver.hasAssessment(listing) }
-            val toMeasure = if (alreadyChecked) emptySet() else prepared.filter { (_, choices) -> choices.any { it.url.isNotBlank() && isHls(it) } }
-                .distinctBy { it.first.source.kind }.take(limits.measuredProvidersPerMatch).map { it.first.id }.toSet()
-            prepared.map { (listing, choices) -> async {
-                val result = if (listing.id in toMeasure) resolver.measurePrepared(listing, resolverRevision, background = false).ifEmpty { choices } else choices
-                result.map { it.copy(providers = listOf(listing.source.name)) }
-            } }.awaitAll().flatten()
+        val choices = if (row == null) emptyList() else if (id.startsWith("fut:probe:")) workbench.streams(id) else {
+            // Always include every provider's playable choices. Missing links
+            // still require normal extraction, but metadata/benchmarks never
+            // delay this response or hide an unrated alternative.
+            resolver.awaitPreparedSnapshot(row.listings, resolverRevision)
         }
         if (resolverRevision != resolver.revision()) return json(call, buildJsonObject { put("streams", JsonArray(emptyList())) })
         val streams = rankStreams(deduplicateStreams(choices.filter { it.url.isNotBlank() && it.externalUrl.isBlank() }))

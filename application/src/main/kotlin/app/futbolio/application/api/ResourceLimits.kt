@@ -36,6 +36,7 @@ data class ResourceLimits(
     val prefetchChoicesPerListing: Int = 2,
     val prefetchCacheMillis: Long = 60_000,
     val prefetchIntervalMillis: Long = 5_000,
+    val prefetchRefreshAheadMillis: Long = 10_000,
     val prefetchInterestMillis: Long = 90_000,
     val prefetchBatchMillis: Long = 45_000,
     val foregroundQuietMillis: Long = 10_000,
@@ -50,7 +51,7 @@ data class ResourceLimits(
         require(listOf(catalogRefreshMillis, staleCatalogMillis, resolutionCacheMillis,
             resolutionTimeoutMillis, mediaObjectBytes, mediaDeadlineMillis, relayIdleMillis,
             streamAssessmentMillis, streamAssessmentBatchMillis, prefetchCacheMillis, prefetchIntervalMillis,
-            prefetchInterestMillis, prefetchBatchMillis, prefetchInitialMatchMillis, foregroundQuietMillis, playbackQuietMillis).all { it > 0 })
+            prefetchInterestMillis, prefetchBatchMillis, prefetchInitialMatchMillis, prefetchRefreshAheadMillis, foregroundQuietMillis, playbackQuietMillis).all { it > 0 })
         require(staleCatalogMillis >= catalogRefreshMillis)
         require(pendingResolutions >= activeResolutions)
     }

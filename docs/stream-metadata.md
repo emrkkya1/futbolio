@@ -2,9 +2,11 @@
 
 Futbolio performs bounded HLS transport checks on selection and proactively warms up
 to four likely Live Now matches during app startup/catalog browsing. It does not run
-continuous all-catalog speed tests. Ordinary results use a 20-second monotonic cache;
-measured warm-ups use at most 60 seconds from the oldest observed sample. Both share
-the resolver's single-flight lifecycle. See [predictive prefetch](PREDICTIVE-STREAM-PREFETCH.md).
+continuous all-catalog speed tests. Prepared links use a 20-second monotonic cache
+with independent proactive refresh; measurement evidence lasts at most 60 seconds
+from the oldest observation. Both share the resolver's single-flight lifecycle.
+HTTP requests return the current ready snapshot, never waiting for speed checks.
+See [ready snapshots](READY-STREAM-SNAPSHOTS.md) and [predictive prefetch](PREDICTIVE-STREAM-PREFETCH.md).
 
 ## What users see
 
