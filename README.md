@@ -16,6 +16,14 @@ The published release is for **Android / Android TV 8.0 or newer**. Install Futb
 
 Futbolio checks this repository's latest stable GitHub release when opened (at most once every 30 minutes while the app process stays alive). A newer compatible release shows a toast and an update prompt. Choose **Download and install** to download the APK and open Android's installer. The first time, Android may ask you to allow Futbolio to **install unknown apps**; installation always needs your confirmation. Your settings are kept.
 
+After starting, the dashboard says **“Relay is starting, please wait…”** while the
+white diamond fills green. It says **“Relay is live”** after discovery, preparation
+of the four priority live matches, and measurement attempts for the first match.
+Other matches continue preparing afterward. Failed/timed-out checks may leave
+streams unrated; “live” does not guarantee playable sources or freeze-free playback.
+With no live matches, readiness finishes after discovery. The server is available
+throughout preparation, and the diamond can still stop it.
+
 Use **Settings → Check for updates** to check manually. Release checks require internet access; an offline or failed automatic check does not interrupt the app. The updater verifies the APK's SHA-256 checksum, package, version, and signing key before offering installation. Updates must use the same signing key as your installed app, so local debug builds cannot update to production-signed releases this way. You can also download a newer release APK manually and install it over an existing, compatibly signed installation.
 
 ### If the add-on does not install

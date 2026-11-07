@@ -7,6 +7,9 @@ enum class RuntimePhase(val label: String) {
 
 data class DiagnosticSnapshot(val activeMedia: Int, val mediaBytes: Long, val mediaRequests: Long, val failures: Long, val events: List<String>)
 
+/** UI readiness only; never gates the listener, stream responses, or scheduler. */
+data class RelayPreparation(val progress: Float = 0f, val ready: Boolean = false)
+
 data class RuntimeSnapshot(
     val phase: RuntimePhase = RuntimePhase.STOPPED,
     val providers: List<ProviderStatus> = emptyList(),
@@ -15,6 +18,7 @@ data class RuntimeSnapshot(
     val diagnostics: DiagnosticSnapshot = DiagnosticSnapshot(0, 0, 0, 0, emptyList()),
     val error: String = "",
     val testBatch: ProviderTestBatch = ProviderTestBatch(),
+    val preparation: RelayPreparation = RelayPreparation(),
 ) { val running get() = phase == RuntimePhase.RUNNING }
 
 data class SaveResult(val saved: Boolean, val error: String = "")

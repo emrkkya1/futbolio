@@ -9,6 +9,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.testTag
@@ -72,26 +78,37 @@ internal val backdrop = Color(0xff1c1c1c)
 
 @Composable internal fun RelayHero(runtime: RuntimeSnapshot, modifier: Modifier = Modifier, onToggle: () -> Unit) {
     val busy = runtime.phase in listOf(RuntimePhase.STARTING, RuntimePhase.STOPPING)
+    val preparing = runtime.phase == RuntimePhase.STARTING || (runtime.running && !runtime.preparation.ready)
+    val fill by animateFloatAsState(if (runtime.preparation.ready) 1f else runtime.preparation.progress, label = "relay-preparation")
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.04f else 1f, label = "relay-focus")
-    val label = if (busy) "${runtime.phase.label}…" else if (runtime.running) "Stop Futbolio" else "Start Futbolio"
+    val label = if (preparing) "Relay is starting, please wait…" else if (busy) "${runtime.phase.label}…" else if (runtime.running) "Stop Futbolio" else "Start Futbolio"
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             Button(onClick = onToggle, enabled = !busy,
                 modifier = modifier.testTag("relay-toggle").size(158.dp).scale(scale)
-                    .semantics { contentDescription = label }.onFocusChanged { focused = it.hasFocus }
+                    .semantics {
+                        contentDescription = if (runtime.running) "Stop Futbolio" else label
+                        if (preparing) progressBarRangeInfo = ProgressBarRangeInfo(fill, 0f..1f)
+                    }
+                    .clip(relayDiamond).drawBehind {
+                        if (preparing) {
+                            drawRect(Color.White)
+                            drawRect(lime, Offset(0f, size.height * (1f - fill)), Size(size.width, size.height * fill))
+                        }
+                    }.onFocusChanged { focused = it.hasFocus }
                     .border(if (focused) 3.dp else 0.dp, if (focused) lavender else Color.Transparent, relayDiamond),
                 shape = relayDiamond, contentPadding = PaddingValues(24.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = lime, contentColor = Color.White,
-                    disabledContainerColor = panel, disabledContentColor = quiet)) {
-                if (busy) CircularProgressIndicator(Modifier.size(48.dp), color = lavender, strokeWidth = 3.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = if (preparing) Color.Transparent else lime, contentColor = if (preparing) lavender else Color.White,
+                    disabledContainerColor = if (preparing) Color.Transparent else panel, disabledContentColor = if (preparing) lavender else quiet)) {
+                if (busy && !preparing) CircularProgressIndicator(Modifier.size(48.dp), color = lavender, strokeWidth = 3.dp)
                 else SolidIcon(if (runtime.running) SolidIcon.Stop else SolidIcon.Play, Modifier.size(72.dp))
             }
             Text(label, style = MaterialTheme.typography.titleLarge, color = Color.White)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            Canvas(Modifier.size(8.dp)) { drawCircle(if (runtime.running) lime else quiet) }
-            Text(when (runtime.phase) {
+            Canvas(Modifier.size(8.dp)) { drawCircle(if (runtime.running && !preparing) lime else quiet) }
+            Text(if (preparing) "Relay is starting, please wait…" else when (runtime.phase) {
                 RuntimePhase.RUNNING -> "Relay is live"
                 RuntimePhase.STARTING -> "Starting relay…"
                 RuntimePhase.STOPPING -> "Stopping relay…"

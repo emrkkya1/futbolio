@@ -4,6 +4,17 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
+## 0.4.6
+
+### Changed
+- Keep the Android/mobile/TV and desktop dashboard in “Relay is starting, please
+  wait…” until discovery, all four priority minimum sets, and the first-priority
+  match's measurement attempts finish. The white diamond fills green with actual
+  preparation milestones, then the status becomes “Relay is live”.
+- Keep the listener immediately available and the preparation algorithm unchanged;
+  later matches continue in the background. Startup remains stoppable, failed or
+  timed-out attempts count as finished, and no-live-match discovery finishes readiness.
+
 ## 0.4.5
 
 ### Changed

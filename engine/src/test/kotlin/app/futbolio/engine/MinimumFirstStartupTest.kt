@@ -7,6 +7,7 @@ import app.futbolio.domain.match.*
 import app.futbolio.domain.provider.SourceConfig
 import app.futbolio.engine.runtime.FutbolioEngine
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import java.net.ServerSocket
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.*
@@ -59,6 +60,9 @@ class MinimumFirstStartupTest {
             providers = directory, scoreFeed = feed)
         try {
             engine.start()
+            assertEquals(RuntimePhase.RUNNING, engine.phase.value, "The listener lifecycle must not wait for UI readiness")
+            val preparingSnapshot = withTimeout(3000) { engine.snapshot.first { it.phase == RuntimePhase.RUNNING } }
+            assertFalse(preparingSnapshot.preparation.ready)
             withTimeout(3000) { discoveryStarted.await(); fastDiscoveryDone.await() }
             assertTrue(resolved.isEmpty())
             assertFalse(scoreboardStarted.isCompleted, "The initial ESPN pass follows provider discovery/grouping")
@@ -69,6 +73,8 @@ class MinimumFirstStartupTest {
             withTimeout(3000) { firstResolved.await() }
             assertTrue(resolved.all { it.contains("Liverpool") }, "ESPN-ended matches must not be prepared from schedule estimates")
             assertTrue(resolved.isNotEmpty(), "ESPN-live matches must be prepared even if the provider schedule says upcoming")
+            withTimeout(3000) { engine.snapshot.first { it.preparation.ready } }
+            Unit
         } finally { engine.shutdown() }
     }
 

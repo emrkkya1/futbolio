@@ -37,6 +37,82 @@ class MinimumFirstPreparationTest {
     }
     private fun good() = StreamAssessment(ConnectionStatus.GOOD, samples = 2)
 
+    @Test fun readinessWaitsForAllMinimumSetsButOnlyFirstMatchMeasurements() = runTest {
+        val discovery = CompletableDeferred<Unit>()
+        val minimum = CompletableDeferred<Unit>()
+        val firstProbe = CompletableDeferred<Unit>()
+        val laterProbes = CompletableDeferred<Unit>()
+        val rows = (1..4).map { entry(it) }
+        val resolver = StreamResolver(backgroundScope, net, directory {
+            if (it.page.contains("m4-")) minimum.await()
+            listOf(choice(it))
+        }, clock(testScheduler), assessor = StreamAssessor {
+            if (it.url.contains("m1-")) firstProbe.await() else laterProbes.await()
+            good()
+        })
+        val warmer = LiveStreamPrefetcher(backgroundScope, resolver, { rows }, { config }, clock(testScheduler),
+            initialize = { discovery.await() })
+        warmer.start(); runCurrent()
+        assertEquals(RelayPreparation(), warmer.preparation.value)
+        discovery.complete(Unit); runCurrent()
+        assertFalse(warmer.preparation.value.ready)
+        assertEquals(PreparationPhase.PRIORITY_MINIMUM, warmer.phase)
+        val minimumProgress = warmer.preparation.value.progress
+        minimum.complete(Unit); runCurrent()
+        assertFalse(warmer.preparation.value.ready)
+        assertEquals(.75f, warmer.preparation.value.progress)
+        assertTrue(warmer.preparation.value.progress > minimumProgress)
+        firstProbe.complete(Unit); runCurrent()
+        assertEquals(RelayPreparation(1f, true), warmer.preparation.value)
+        assertEquals(PreparationPhase.ENRICHMENT, warmer.phase, "Other matches continue measuring after UI readiness")
+        warmer.pause(); runCurrent()
+        assertTrue(warmer.preparation.value.ready, "Playback must not put the UI back into startup")
+        warmer.stop(); runCurrent()
+        assertEquals(RelayPreparation(), warmer.preparation.value)
+    }
+
+    @Test fun noLiveMatchesBecomeReadyAfterDiscoveryAndUnavailableFirstMatchAlsoFinishes() = runTest {
+        for (rows in listOf(emptyList(), listOf(entry(1)))) {
+            val resolver = StreamResolver(backgroundScope, net, directory { error("Unavailable") }, clock(testScheduler))
+            val warmer = LiveStreamPrefetcher(backgroundScope, resolver, { rows }, { config }, clock(testScheduler))
+            warmer.browsing(); warmer.warmOnce()
+            assertEquals(RelayPreparation(1f, true), warmer.preparation.value)
+            warmer.reset()
+            assertEquals(RelayPreparation(), warmer.preparation.value)
+        }
+    }
+
+    @Test fun timedOutMeasurementsFinishReadinessWithoutInventingAGrade() = runTest {
+        val row = entry(1)
+        val resolver = StreamResolver(backgroundScope, net, directory { listOf(choice(it)) }, clock(testScheduler),
+            assessor = StreamAssessor { awaitCancellation() })
+        val warmer = LiveStreamPrefetcher(backgroundScope, resolver, { listOf(row) }, { config }, clock(testScheduler))
+        warmer.browsing()
+        val work = async { warmer.warmOnce() }
+        runCurrent()
+        assertFalse(warmer.preparation.value.ready)
+        advanceTimeBy(6000); runCurrent(); work.await()
+        assertEquals(RelayPreparation(1f, true), warmer.preparation.value)
+        assertEquals(ConnectionStatus.UNKNOWN, resolver.preparedSnapshot(row.listings, resolver.revision())!!.first().assessment.status)
+    }
+
+    @Test fun interruptedFirstMatchKeepsProgressAndResumesBeforeBecomingReady() = runTest {
+        val row = entry(1)
+        val probe = CompletableDeferred<Unit>()
+        val resolver = StreamResolver(backgroundScope, net, directory { listOf(choice(it)) }, clock(testScheduler),
+            assessor = StreamAssessor { probe.await(); good() })
+        val warmer = LiveStreamPrefetcher(backgroundScope, resolver, { listOf(row) }, { config }, clock(testScheduler))
+        warmer.browsing()
+        val pass = async { warmer.warmOnce() }; runCurrent()
+        val progress = warmer.preparation.value
+        assertFalse(progress.ready)
+        warmer.pause(); runCurrent(); pass.await()
+        assertEquals(progress, warmer.preparation.value)
+        probe.complete(Unit)
+        warmer.warmOnce()
+        assertEquals(RelayPreparation(1f, true), warmer.preparation.value)
+    }
+
     @Test fun allTwentyPriorityListingsFinishBeforeProbesAndExpansionComesLast() = runTest {
         val entries = (1..6).map { entry(it, 5) }
         val prepared = mutableSetOf<String>()

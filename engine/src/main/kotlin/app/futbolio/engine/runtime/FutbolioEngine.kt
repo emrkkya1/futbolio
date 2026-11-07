@@ -93,7 +93,9 @@ internal class FutbolioEngine(
         flow { while (currentCoroutineContext().isActive) { emit(diagnosticSnapshot()); delay(2000) } }) { phase, providers, reports, candidates, diagnostic ->
         RuntimeSnapshot(phase, providers, reports, candidates, diagnostic)
     }
-    override val snapshot = combine(baseSnapshot, workbench.batchState) { snapshot, batch -> snapshot.copy(testBatch = batch) }
+    override val snapshot = combine(baseSnapshot, workbench.batchState, prefetcher.preparation) { snapshot, batch, preparation ->
+        snapshot.copy(testBatch = batch, preparation = preparation)
+    }
         .stateIn(scope, SharingStarted.WhileSubscribed(5000), RuntimeSnapshot())
 
     override suspend fun start() = lifecycle.withLock {
