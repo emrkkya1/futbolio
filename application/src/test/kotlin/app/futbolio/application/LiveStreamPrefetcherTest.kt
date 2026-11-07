@@ -39,7 +39,7 @@ class LiveStreamPrefetcherTest {
     private fun choice(row: Listing) = StreamChoice("Live", "${row.page}.m3u8")
     private fun good() = StreamAssessment(ConnectionStatus.GOOD, headroom = 3.0, samples = 2)
 
-    @Test fun preparationIsIndependentOfSamplingAndHighestPriorityMatchGetsUsefulResultsFirst() = runTest {
+    @Test fun allPriorityMinimumSetsFinishBeforeSamplingAndThenOtherMatchesExpand() = runTest {
         val rows = listOf(entry("pl", providers = 3), entry("tur", "Süper Lig", providers = 3),
             entry("cl", "Champions League", providers = 3), entry("gs", "Süper Lig", "Galatasaray", 3), entry("other", "LaLiga"))
         val calls = mutableListOf<String>()
@@ -56,7 +56,7 @@ class LiveStreamPrefetcherTest {
         val warmer = LiveStreamPrefetcher(backgroundScope, resolver, { rows }, { config }, clock(testScheduler))
         warmer.browsing()
         assertEquals(listOf("gs", "cl", "tur", "pl"), warmer.warmOnce())
-        assertEquals(12, calls.size)
+        assertEquals(13, calls.size)
         assertEquals(listOf("gs-1", "gs-2", "gs-3"), calls.take(3).map { it.substringAfterLast('/') })
         assertEquals(2, preparationPeak)
         assertEquals(1, checkPeak, "Bandwidth tests must not race each other")
@@ -64,8 +64,10 @@ class LiveStreamPrefetcherTest {
         assertTrue(rows.single { it.id == "cl" }.listings.all(resolver::hasFresh))
         val first = warmer.lastReport.matches.first()
         assertEquals(100L, first.firstPreparedMillis)
-        assertEquals(300L, first.firstRatedMillis)
-        assertEquals(600L, lastPreparedAt, "All twelve preparations finish without waiting for twelve checks")
+        assertEquals(200L, first.minimumReadyMillis)
+        assertEquals(1000L, first.firstRatedMillis)
+        assertTrue(warmer.lastReport.matches.all { requireNotNull(it.minimumReadyMillis) < requireNotNull(first.firstRatedMillis) })
+        assertEquals(3300L, lastPreparedAt, "The other match is prepared only after priority enrichment")
         assertTrue(requireNotNull(first.firstRatedMillis) < warmer.lastReport.elapsedMillis)
         val selected = rows.single { it.id == "gs" }.listings.first()
         val before = testScheduler.currentTime
@@ -73,7 +75,7 @@ class LiveStreamPrefetcherTest {
         assertEquals(before, testScheduler.currentTime)
         assertEquals(ConnectionStatus.GOOD, cached.assessment.status)
         assertTrue(cached.assessment.checkedAtMillis > 0)
-        assertEquals(12, calls.size)
+        assertEquals(13, calls.size)
     }
 
     @Test fun selectedWarmupIsSharedAndPromotedRatherThanCanceledOrResolvedTwice() = runTest {
@@ -119,7 +121,7 @@ class LiveStreamPrefetcherTest {
         assertEquals(setOf("same-provider", "other-2", "other-3"), warmer.lastReport.matches.single().measuredProviders)
     }
 
-    @Test fun slowProviderPreparationDoesNotHideAnAlreadyReadySource() = runTest {
+    @Test fun slowProviderPreparationDelaysEnrichmentButNeverDropsAnAlreadyReadySource() = runTest {
         val candidate = entry("gs", "Süper Lig", "Galatasaray", providers = 3)
         val resolver = StreamResolver(backgroundScope, net, directory {
             delay(if (it.source.kind == "provider-1") 20_000 else 100)
@@ -130,12 +132,13 @@ class LiveStreamPrefetcherTest {
         warmer.warmOnce()
         val timing = warmer.lastReport.matches.single()
         assertEquals(100L, timing.firstPreparedMillis)
-        assertEquals(300L, timing.firstRatedMillis)
-        assertEquals(20_000L, warmer.lastReport.elapsedMillis)
-        assertEquals(setOf("provider-2", "provider-3"), timing.measuredProviders)
+        assertEquals(20_000L, timing.minimumReadyMillis)
+        assertTrue(requireNotNull(timing.firstRatedMillis) >= requireNotNull(timing.minimumReadyMillis))
+        assertTrue(warmer.lastReport.elapsedMillis >= 20_000L)
+        assertEquals(setOf("provider-1", "provider-2", "provider-3"), timing.measuredProviders)
     }
 
-    @Test fun initialOptionsAcrossMatchesComeBeforeRefinementsAndAreNotDownloadedTwice() = runTest {
+    @Test fun twoOptionsPerChosenProviderAreEnrichedWithoutDownloadingFreshOptionsTwice() = runTest {
         val entries = listOf(entry("gs", "Süper Lig", "Galatasaray", 2), entry("cl", "Champions League", providers = 2))
         val checked = mutableListOf<String>()
         val resolver = StreamResolver(backgroundScope, net, directory {
@@ -146,8 +149,7 @@ class LiveStreamPrefetcherTest {
         warmer.warmOnce()
         assertEquals(8, checked.size)
         assertEquals(8, checked.distinct().size)
-        assertTrue(checked.take(4).all { it.endsWith("-hd") })
-        assertTrue(checked.drop(4).all { it.endsWith("-sd") })
+        assertTrue(checked.chunked(2).all { it[0].endsWith("-hd") && it[1].endsWith("-sd") })
     }
 
     @Test fun expiredPreparedLinksAreNotResurrectedOrSilentlyReExtractedByMeasurement() = runTest {
@@ -163,7 +165,7 @@ class LiveStreamPrefetcherTest {
         assertFalse(resolver.hasFresh(listing))
     }
 
-    @Test fun marginalFirstOptionGetsOneEarlyAlternativeWithinTheSamePriorityMatchBudget() = runTest {
+    @Test fun marginalFirstOptionGetsAnAlternativeAfterEveryPriorityMinimumSetIsReady() = runTest {
         val entries = listOf(entry("gs", "Süper Lig", "Galatasaray"), entry("cl", "Champions League"))
         val checked = mutableListOf<String>()
         val resolver = StreamResolver(backgroundScope, net, directory {
@@ -178,8 +180,8 @@ class LiveStreamPrefetcherTest {
         warmer.browsing()
         warmer.warmOnce()
         val first = warmer.lastReport.matches.first()
-        assertEquals(1100L, first.firstRatedMillis)
-        assertEquals(2100L, first.firstGoodMillis)
+        assertEquals(1200L, first.firstRatedMillis)
+        assertEquals(2200L, first.firstGoodMillis)
         assertEquals(listOf("https://fixture.example/gs-1-hd", "https://fixture.example/gs-1-sd"), checked.take(2))
         assertEquals(4, checked.distinct().size)
     }
@@ -317,7 +319,7 @@ class LiveStreamPrefetcherTest {
         assertTrue(resolver.prefetch(row("warm"), resolver.revision()).isEmpty())
     }
 
-    @Test fun interestExpiresAndResetRevisionChangesPreventStaleWarmupWork() = runTest {
+    @Test fun idlePreparationContinuesAfterNinetySecondsButResetPreventsObsoleteWork() = runTest {
         var snapshots = 0; var calls = 0
         val resolver = StreamResolver(backgroundScope, net, directory { calls++; listOf(choice(it)) }, clock(testScheduler), assessor = StreamAssessor { good() })
         val entries = listOf(entry("gs", "Süper Lig", "Galatasaray"))
@@ -326,8 +328,8 @@ class LiveStreamPrefetcherTest {
         warmer.warmOnce()
         assertEquals(1, calls)
         advanceTimeBy(90_001)
-        assertTrue(warmer.warmOnce().isEmpty())
-        assertEquals(1, snapshots)
+        assertTrue(warmer.warmOnce().isNotEmpty())
+        assertEquals(2, snapshots)
         warmer.browsing()
         warmer.warmOnce()
         assertEquals(2, calls)
@@ -337,19 +339,19 @@ class LiveStreamPrefetcherTest {
         assertEquals(2, calls)
     }
 
-    @Test fun tickerStopsAfterInterestWindowAndShutdown() = runTest {
+    @Test fun tickerContinuesWhileIdleAndStopsOnShutdown() = runTest {
         var snapshots = 0
         val resolver = StreamResolver(backgroundScope, net, directory { listOf(choice(it)) }, clock(testScheduler), assessor = StreamAssessor { good() })
         val warmer = LiveStreamPrefetcher(backgroundScope, resolver, { snapshots++; emptyList() }, { config }, clock(testScheduler))
         warmer.start()
         runCurrent()
-        assertEquals(2, snapshots)
+        assertEquals(1, snapshots)
         advanceTimeBy(95_000)
         runCurrent()
         val afterInterest = snapshots
         advanceTimeBy(20_000)
         runCurrent()
-        assertEquals(afterInterest, snapshots)
+        assertTrue(snapshots > afterInterest)
         warmer.browsing()
         advanceTimeBy(5000)
         runCurrent()
@@ -400,23 +402,23 @@ class LiveStreamPrefetcherTest {
         assertEquals(0L, testScheduler.currentTime)
     }
 
-    @Test fun catalogUpdatesWakePreparationWithoutWaitingOrExtendingBrowsingInterest() = runTest {
+    @Test fun catalogUpdatesWakeIdlePreparationWithoutWaitingForTheTick() = runTest {
         var snapshots = 0
         val resolver = StreamResolver(backgroundScope, net, directory { listOf(choice(it)) }, clock(testScheduler))
         val warmer = LiveStreamPrefetcher(backgroundScope, resolver, { snapshots++; emptyList() }, { config }, clock(testScheduler))
         warmer.start()
         runCurrent()
-        assertEquals(2, snapshots, "Independent preparation and measurement lanes")
+        assertEquals(1, snapshots)
         advanceTimeBy(1000)
         warmer.changed()
         runCurrent()
-        assertEquals(4, snapshots, "Wake both lanes before the five-second maintenance tick")
+        assertEquals(2, snapshots, "Wake the ordered pipeline before the five-second maintenance tick")
         advanceTimeBy(90_000)
         runCurrent()
         val expired = snapshots
         warmer.changed()
         runCurrent()
-        assertEquals(expired, snapshots, "Catalog changes alone must not authorize indefinite probing")
+        assertTrue(snapshots > expired, "An idle relay continues bounded maintenance until paused or stopped")
         warmer.stop()
     }
 }

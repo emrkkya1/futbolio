@@ -54,18 +54,19 @@ highest quality. These are playlist declarations, not decoder-verified specifica
   keys and decrypt only the signature prefix using each segment's key/IV binding.
   Handle key rotation and clear segments explicitly. This is not a decode test.
 - Leave byte-range, gapped, and unsupported-encryption playlists untested.
-- Default limits: one bandwidth check active globally per runtime, four choices per foreground listing,
-  six seconds per check, seven seconds total assessment budget per listing (including
-  semaphore waits). Completed results survive the batch deadline. Provider resolution
-  has a separate deadline, so a slow check never removes successfully resolved streams.
-- Background link preparation overlaps up to two providers independently of speed
-  sampling. Measure at most three distinct providers per match, with two checked
-  choices per measured provider and a 45-second whole-batch deadline. Initial match
-  passes have an eight-second window and publish ready links/observations promptly.
-  Selecting a match promotes all its pending
-  providers together, cancels unrelated speculation, and never inherits the longer
-  background assessment deadline. Playback cancels/pauses probes; it is followed by
-  a 30-second quiet period. Details and data limits are in the prefetch document.
+- Foreground stream responses never wait for assessment. Default background limits
+  are one bandwidth check globally, at most three distinct providers per priority
+  match, two options per provider, six seconds per option and a 45-second active-probe
+  budget per pass. Minimum extraction/refresh time has its own bounds and does not
+  consume that probe budget. Diagnostic workbench checks have separate policies.
+- Up to two minimum extractions overlap; all four priority minimum sets precede any
+  optional probing. After priority-enrichment attempts complete, prepare other live
+  matches' minimum sets. A cold selection preempts unrelated work and never inherits
+  an assessment deadline. Playback pauses speculative work, followed by a 30-second
+  quiet period and automatic idle resumption. Details are in the prefetch document.
+- If link extraction already fetched a master playlist, retain its declared resolution,
+  frame rate and bitrate with bounded header parsing and zero additional requests.
+  These minimum declarations do not acquire a connection grade without sampling.
 - Metadata and individual sample results are published progressively so a deadline
   does not erase an already-observed resolution, bitrate, or buffering-risk signal.
 - Responses are closed on completion, failure, and cancellation. No raw URLs,

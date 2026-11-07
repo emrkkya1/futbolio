@@ -37,7 +37,8 @@ class LiveMatchPriorityTest {
     @Test fun youthNamesAreNotMistakenForFavouriteSeniorTeamsAndUserAliasesWork() {
         val youth = entry("youth", "Champions League", "Galatasaray U19")
         assertTrue(LiveMatchPriority.score(youth, config) < LiveMatchPriority.score(entry("gs", "Süper Lig", "Galatasaray"), config))
-        assertEquals(10_600, LiveMatchPriority.score(entry("alias", "Süper Lig", "GS"), config.copy(teamAliases = mapOf("GS" to "Galatasaray"))))
+        assertEquals(LiveMatchPriority.score(entry("gs", "Süper Lig", "Galatasaray"), config),
+            LiveMatchPriority.score(entry("alias", "Süper Lig", "GS"), config.copy(teamAliases = mapOf("GS" to "Galatasaray"))))
     }
 
     @Test fun priorityIsComputedBeforeAnyCatalogPageLimitAndResultsAreStable() {

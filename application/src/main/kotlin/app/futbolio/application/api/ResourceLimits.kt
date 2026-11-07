@@ -8,7 +8,7 @@ data class ResourceLimits(
     val staleCatalogMillis: Long = 600_000,
     val activeResolutions: Int = 2,
     val pendingResolutions: Int = 8,
-    val resolutionCacheEntries: Int = 32,
+    val resolutionCacheEntries: Int = 64,
     val resolutionCacheMillis: Long = 20_000,
     val resolutionTimeoutMillis: Long = 25_000,
     val alternatePlayers: Int = 4,
@@ -30,14 +30,12 @@ data class ResourceLimits(
     val streamAssessmentMillis: Long = 6_000,
     val streamAssessmentBatchMillis: Long = 7_000,
     val prefetchMatches: Int = 4,
-    val prefetchListingsPerBatch: Int = 16,
+    val prefetchExpansionMatches: Int = 4,
     val measuredProvidersPerMatch: Int = 3,
-    val prefetchInitialMatchMillis: Long = 8_000,
     val prefetchChoicesPerListing: Int = 2,
     val prefetchCacheMillis: Long = 60_000,
     val prefetchIntervalMillis: Long = 5_000,
     val prefetchRefreshAheadMillis: Long = 10_000,
-    val prefetchInterestMillis: Long = 90_000,
     val prefetchBatchMillis: Long = 45_000,
     val foregroundQuietMillis: Long = 10_000,
     val playbackQuietMillis: Long = 30_000,
@@ -46,12 +44,12 @@ data class ResourceLimits(
         require(listOf(sources, listingsPerSource, activeResolutions, pendingResolutions, resolutionCacheEntries,
             alternatePlayers, documentBytes, playlistBytes, mediaBufferBytes, desktopMediaSlots,
             androidMediaSlots, apiSlots, relayTokens, posterEntries, posterRenderSlots, diagnosticEvents,
-            activeStreamAssessments, assessedChoicesPerListing, prefetchMatches, prefetchListingsPerBatch,
+            activeStreamAssessments, assessedChoicesPerListing, prefetchMatches, prefetchExpansionMatches,
             measuredProvidersPerMatch, prefetchChoicesPerListing).all { it > 0 })
         require(listOf(catalogRefreshMillis, staleCatalogMillis, resolutionCacheMillis,
             resolutionTimeoutMillis, mediaObjectBytes, mediaDeadlineMillis, relayIdleMillis,
             streamAssessmentMillis, streamAssessmentBatchMillis, prefetchCacheMillis, prefetchIntervalMillis,
-            prefetchInterestMillis, prefetchBatchMillis, prefetchInitialMatchMillis, prefetchRefreshAheadMillis, foregroundQuietMillis, playbackQuietMillis).all { it > 0 })
+            prefetchBatchMillis, prefetchRefreshAheadMillis, foregroundQuietMillis, playbackQuietMillis).all { it > 0 })
         require(staleCatalogMillis >= catalogRefreshMillis)
         require(pendingResolutions >= activeResolutions)
     }

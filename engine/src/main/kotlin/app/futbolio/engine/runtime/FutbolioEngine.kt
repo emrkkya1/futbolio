@@ -67,12 +67,13 @@ internal class FutbolioEngine(
     internal val workbench = ProviderWorkbench(scope, net, resolver, providers, SegmentProbe(net), time)
     private val fixtures = FixtureService(scope, scoreFeed, time)
     private val entries = EntryCatalog(catalog, fixtures, presentation, scope, time, events = diagnostics)
-    internal val prefetcher = LiveStreamPrefetcher(scope, resolver, { entries.entries(refreshScores = false) }, entries::presentation, time, limits, diagnostics)
+    internal val prefetcher = LiveStreamPrefetcher(scope, resolver, { entries.entries(refreshScores = true) }, entries::presentation,
+        time, limits, diagnostics, initialize = { catalog.refresh().await() })
     private val posters = PosterStore(entries, poster, time, limits)
     private val measuredActivity = object : MediaActivity {
         private fun pauseChecks() {
             playbackQuietUntil = time.monotonicMillis() + limits.playbackQuietMillis
-            prefetcher.reset()
+            prefetcher.pause()
             resolver.pauseMeasurements()
         }
         override fun started() { pauseChecks(); activity.started() }

@@ -26,9 +26,7 @@ object CatalogSelection {
         }.filter { entry ->
             (query.genre.isBlank() || entry.league.name == query.genre) &&
                 (normalized.isBlank() || TextPolicy.normalize("${entry.title} ${entry.league.name} ${entry.sources.joinToString()}").contains(normalized))
-        }.sortedWith(compareByDescending<CatalogEntry> { if (it.channel) 0 else LiveMatchPriority.score(it, preferences) }
-            .thenByDescending { it.state(now) in listOf(MatchState.LIVE, MatchState.HALFTIME) }
-            .thenBy { it.starts }.thenBy { it.title }.thenBy { it.id })
+        }.sortedWith(LiveMatchPriority.ordering(preferences, now))
             .drop(query.skip.coerceAtLeast(0)).take(100).toList()
     }
 }

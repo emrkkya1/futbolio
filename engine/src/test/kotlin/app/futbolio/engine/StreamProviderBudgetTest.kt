@@ -15,7 +15,7 @@ import kotlin.test.*
 
 class StreamProviderBudgetTest {
     private fun verify(unavailable: String? = null, openUnrated: Boolean = false) = runBlocking {
-        val starts = System.currentTimeMillis() + 3_600_000 // Not a background Live Now candidate.
+        val starts = System.currentTimeMillis() - 60_000 // Measurements now belong only to priority Live Now matches.
         val sources = (1..5).map { SourceConfig("provider-$it", "provider-$it", "Provider $it", "https://fixture.example/") }
         val resolved = AtomicInteger()
         val sampled = ConcurrentHashMap.newKeySet<String>()
