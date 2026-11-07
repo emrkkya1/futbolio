@@ -212,7 +212,7 @@ class LiveStreamPrefetcherTest {
         assertTrue(resolver.hasAssessment(listing, 2))
     }
 
-    @Test fun warmCacheExpiresFromItsOldestMeasurementUsingMonotonicTime() = runTest {
+    @Test fun refreshedLinksAndOldestMeasurementHaveIndependentMonotonicExpiry() = runTest {
         var wall = now
         val time = object : TimeSource {
             override fun monotonicMillis() = testScheduler.currentTime
@@ -225,10 +225,18 @@ class LiveStreamPrefetcherTest {
         resolver.prefetch(listing, resolver.revision())
         assertEquals(2400L, testScheduler.currentTime)
         wall += 3_600_000 // Wall-clock changes cannot prematurely invalidate or extend the cache.
-        advanceTimeBy(57_799)
+        advanceTimeBy(17_599)
         assertTrue(resolver.hasFresh(listing))
         advanceTimeBy(1)
-        assertFalse(resolver.hasFresh(listing), "TTL starts at the oldest observed sample, not batch completion")
+        assertFalse(resolver.hasFresh(listing), "Sampling must not extend raw link lifetime")
+        resolver.prepare(listing, resolver.revision())
+        assertTrue(resolver.hasAssessment(listing, 2), "Same-URL evidence survives link refresh without another benchmark")
+        advanceTimeBy(40_199)
+        resolver.refreshPrepared(listing, resolver.revision())
+        assertTrue(resolver.hasAssessment(listing, 2))
+        advanceTimeBy(1)
+        assertTrue(resolver.hasFresh(listing), "Freshly re-extracted URLs remain usable when old evidence expires")
+        assertFalse(resolver.hasAssessment(listing), "Evidence expires from the oldest observation, not link refresh")
     }
 
     @Test fun selectingAMatchPromotesAllItsProvidersBeforeIndividualRequestsStart() = runTest {
@@ -335,7 +343,7 @@ class LiveStreamPrefetcherTest {
         val warmer = LiveStreamPrefetcher(backgroundScope, resolver, { snapshots++; emptyList() }, { config }, clock(testScheduler))
         warmer.start()
         runCurrent()
-        assertEquals(1, snapshots)
+        assertEquals(2, snapshots)
         advanceTimeBy(95_000)
         runCurrent()
         val afterInterest = snapshots
@@ -398,11 +406,11 @@ class LiveStreamPrefetcherTest {
         val warmer = LiveStreamPrefetcher(backgroundScope, resolver, { snapshots++; emptyList() }, { config }, clock(testScheduler))
         warmer.start()
         runCurrent()
-        assertEquals(1, snapshots)
+        assertEquals(2, snapshots, "Independent preparation and measurement lanes")
         advanceTimeBy(1000)
         warmer.changed()
         runCurrent()
-        assertEquals(2, snapshots, "React to provider discovery before the five-second maintenance tick")
+        assertEquals(4, snapshots, "Wake both lanes before the five-second maintenance tick")
         advanceTimeBy(90_000)
         runCurrent()
         val expired = snapshots
