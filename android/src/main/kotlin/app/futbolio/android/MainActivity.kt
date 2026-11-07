@@ -116,7 +116,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun install() {
-        try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(AppSettings.MANIFEST.replace("http://", "stremio://")))) }
+        try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(model.state.value.manifest.replace("http://", "stremio://")))) }
         catch (_: ActivityNotFoundException) {
             val launch = packageManager.getLaunchIntentForPackage("com.stremio.one")
             if (launch != null) { startActivity(launch); model.notify("Stremio opened. If no add-on was installed, use the installation help.") }

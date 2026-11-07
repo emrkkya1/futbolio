@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import app.futbolio.application.api.FutbolioConfig
 import app.futbolio.engine.api.*
@@ -13,7 +14,7 @@ private val Context.futbolioStore by preferencesDataStore("futbolio-v1")
 class AppSettings(context: Context) {
     private val store = context.applicationContext.futbolioStore
     companion object {
-        const val MANIFEST = "http://127.0.0.1:7000/manifest.json"
+        private val portKey = intPreferencesKey("server-port")
         private val sourcesKey = stringPreferencesKey("providers")
         private val desiredKey = booleanPreferencesKey("desired-running")
     }
@@ -22,4 +23,6 @@ class AppSettings(context: Context) {
     suspend fun save(config: FutbolioConfig) { config.validate(); store.edit { it[sourcesKey] = config.export() } }
     suspend fun desired() = store.data.first()[desiredKey] ?: false
     suspend fun desired(value: Boolean) { store.edit { it[desiredKey] = value } }
+    suspend fun port() = (store.data.first()[portKey] ?: 7000).also { require(it in 1024..65535) }
+    suspend fun port(value: Int) { require(value in 1024..65535); store.edit { it[portKey] = value } }
 }

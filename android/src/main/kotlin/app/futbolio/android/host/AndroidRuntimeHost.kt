@@ -2,6 +2,7 @@ package app.futbolio.android.host
 
 import app.futbolio.application.api.*
 import app.futbolio.engine.api.EngineControl
+import app.futbolio.engine.api.startWithPortFallback
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +17,9 @@ class AndroidRuntimeHost(
     private val desired: suspend () -> Boolean,
     private val setDesired: suspend (Boolean) -> Unit,
     private val ready: suspend () -> Unit,
-    private val create: (FutbolioConfig, PosterRenderer, MediaActivity) -> EngineControl,
+    private val preferredPort: suspend () -> Int = { 7000 },
+    private val portSelected: suspend (Int) -> Unit = {},
+    private val create: (HostConfig, FutbolioConfig, PosterRenderer, MediaActivity) -> EngineControl,
 ) {
     private data class Owned(val owner: Long, val engine: EngineControl, val observer: Job)
     private val sequence = AtomicLong()
@@ -27,6 +30,8 @@ class AndroidRuntimeHost(
     private var startupOwner = 0L
     private val mutableStatus = MutableStateFlow(RuntimeSnapshot())
     val status = mutableStatus.asStateFlow()
+    @Volatile var activeHost = HostConfig()
+        private set
 
     fun claimOwner(): Long = sequence.incrementAndGet().also { owner.set(it) }
 
@@ -44,9 +49,12 @@ class AndroidRuntimeHost(
                     stopCurrent()
                     if (!desired()) { stopService(); return@withLock }
                     mutableStatus.value = RuntimeSnapshot(RuntimePhase.STARTING)
-                    val engine = create(configuration.state.value.config, poster, activity)
+                    val engine = startWithPortFallback(HostConfig(port = preferredPort())) {
+                        create(it, configuration.state.value.config, poster, activity)
+                    }
                     created = engine
-                    engine.start()
+                    portSelected(engine.host.port)
+                    activeHost = engine.host
                     if (owner.get() != id || !desired()) { engine.shutdown(); return@withLock }
                     configuration.attach(ConfigurationTarget { engine.configure(it.sources, it.presentation) })
                     if (owner.get() != id) { configuration.attach(null); engine.shutdown(); return@withLock }
@@ -65,7 +73,7 @@ class AndroidRuntimeHost(
                 } catch (_: Exception) {
                     created?.shutdown()
                     runCatching { setDesired(false) }
-                    if (owner.get() == id) mutableStatus.value = RuntimeSnapshot(error = "Could not start. Check provider settings and whether port 7000 is occupied.")
+                    if (owner.get() == id) mutableStatus.value = RuntimeSnapshot(error = "Could not start. Check provider settings and available network ports.")
                     stopService()
                 }
             }

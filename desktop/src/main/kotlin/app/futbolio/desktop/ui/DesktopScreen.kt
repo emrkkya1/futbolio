@@ -35,6 +35,13 @@ internal val theme = darkColorScheme(primary = Color(0xffb4ff62), secondary = Co
     var preferences by remember { mutableStateOf(false) }
     var defaults by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    var portNoticeDismissed by remember(state.settings.port) { mutableStateOf(false) }
+    if (running && state.settings.port != 7000 && !portNoticeDismissed) {
+        AlertDialog(onDismissRequest = { portNoticeDismissed = true }, title = { Text("Futbolio port changed") },
+            text = { Text("Futbolio is using port ${state.settings.port}. If you already added the add-on in Stremio with port 7000 or another old port, remove it and add it again using the new URL: ${state.manifest}") },
+            confirmButton = { Button(onClick = actions::onCopyManifest) { Text("Copy new URL") } },
+            dismissButton = { TextButton(onClick = { portNoticeDismissed = true }) { Text("Got it") } })
+    }
     DashboardBackground {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         RelayHero(state.runtime, if (state.settings.lanAddress.isBlank()) "this computer" else "private LAN") {

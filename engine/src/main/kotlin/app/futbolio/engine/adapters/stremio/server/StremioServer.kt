@@ -49,10 +49,20 @@ internal class StremioServer(
     private val mediaPermits = Semaphore(if (host.desktop) limits.desktopMediaSlots else limits.androidMediaSlots)
     private val apiPermits = Semaphore(limits.apiSlots)
     private val started = java.util.concurrent.atomic.AtomicBoolean()
-    private val server = embeddedServer(CIO, configure = {
+    // CIO also reports bind failures from its accept coroutine. Handle that copy
+    // here: startSuspend still throws to the owner for fallback, but Android's
+    // default uncaught-exception handler must not terminate the process first.
+    private val server = embeddedServer(CIO, serverConfig {
+        parentCoroutineContext = CoroutineExceptionHandler { _, failure ->
+            if (generateSequence(failure) { it.cause }.none { it is java.net.BindException }) {
+                diagnostics.event("Server task failed: ${failure.javaClass.simpleName}")
+            }
+        }
+        module { routing { route("/{path...}") { handle { handleRequest(call) } } } }
+    }, configure = {
         connectors.add(EngineConnectorBuilder().apply { this.host = this@StremioServer.host.bindHost; port = this@StremioServer.host.port })
         connectionIdleTimeoutSeconds = 15
-    }) { routing { route("/{path...}") { handle { handleRequest(call) } } } }
+    })
 
     suspend fun start() { started.set(true); server.startSuspend(wait = false) }
     fun stop() { if (started.getAndSet(false)) server.stop(0, 1500, java.util.concurrent.TimeUnit.MILLISECONDS) }

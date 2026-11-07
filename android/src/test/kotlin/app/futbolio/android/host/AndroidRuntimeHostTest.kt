@@ -13,8 +13,8 @@ import kotlin.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AndroidRuntimeHostTest {
-    private class FakeEngine(private val gate: CompletableDeferred<Unit>? = null, private val fail: Boolean = false) : EngineControl {
-        override val host = HostConfig()
+    private class FakeEngine(private val gate: CompletableDeferred<Unit>? = null, private val fail: Boolean = false,
+        override val host: HostConfig = HostConfig(), private val occupied: Boolean = false) : EngineControl {
         override val phase = MutableStateFlow(RuntimePhase.STOPPED)
         override val snapshot = MutableStateFlow(RuntimeSnapshot())
         override val providerStatuses = MutableStateFlow<List<ProviderStatus>>(emptyList())
@@ -24,6 +24,7 @@ class AndroidRuntimeHostTest {
         override suspend fun start() {
             phase.value = RuntimePhase.STARTING
             gate?.await()
+            if (occupied) throw java.net.BindException("Address already in use")
             check(!fail) { "private-startup-error" }
             phase.value = RuntimePhase.RUNNING
             snapshot.value = RuntimeSnapshot(RuntimePhase.RUNNING)
@@ -46,7 +47,7 @@ class AndroidRuntimeHostTest {
 
     @Test fun duplicateStartIsIdempotentAndClosingActivityIsNotAnEngineStop() = runTest {
         val created = mutableListOf<FakeEngine>()
-        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { true }, {}, {}) { _, _, _ -> FakeEngine().also { created += it } }
+        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { true }, {}, {}) { _, _, _, _ -> FakeEngine().also { created += it } }
         val owner = host.claimOwner()
         host.start(owner, poster, MediaActivity.None) {}
         host.start(owner, poster, MediaActivity.None) {}
@@ -63,7 +64,7 @@ class AndroidRuntimeHostTest {
     @Test fun stopDuringStartupDisposesPartialEngineAndNeverPublishesRunning() = runTest {
         val gate = CompletableDeferred<Unit>()
         val engine = FakeEngine(gate)
-        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { true }, {}, {}) { _, _, _ -> engine }
+        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { true }, {}, {}) { _, _, _, _ -> engine }
         val owner = host.claimOwner()
         host.start(owner, poster, MediaActivity.None) {}
         runCurrent()
@@ -76,7 +77,7 @@ class AndroidRuntimeHostTest {
 
     @Test fun oldServiceDestructionCannotStopANewerRuntime() = runTest {
         val created = mutableListOf<FakeEngine>()
-        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { true }, {}, {}) { _, _, _ -> FakeEngine().also { created += it } }
+        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { true }, {}, {}) { _, _, _, _ -> FakeEngine().also { created += it } }
         val old = host.claimOwner()
         host.start(old, poster, MediaActivity.None) {}
         runCurrent()
@@ -96,7 +97,7 @@ class AndroidRuntimeHostTest {
         var desired = true
         var stopped = 0
         val engine = FakeEngine(fail = true)
-        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { desired }, { desired = it }, {}) { _, _, _ -> engine }
+        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { desired }, { desired = it }, {}) { _, _, _, _ -> engine }
         host.start(host.claimOwner(), poster, MediaActivity.None) { stopped++ }
         runCurrent()
         assertFalse(desired)
@@ -104,5 +105,45 @@ class AndroidRuntimeHostTest {
         assertEquals(1, engine.closes)
         assertTrue(host.status.value.error.isNotBlank())
         assertFalse(host.status.value.error.contains("private-startup-error"))
+    }
+
+    @Test fun occupiedPortIsRetriedPersistedAndExposedToInstallationActions() = runTest {
+        val created = mutableListOf<FakeEngine>()
+        var savedPort = 7000
+        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { true }, {}, {},
+            preferredPort = { savedPort }, portSelected = { savedPort = it }) { config, _, _, _ ->
+            FakeEngine(host = config, occupied = config.port == 7000).also { created += it }
+        }
+        val owner = host.claimOwner()
+        host.start(owner, poster, MediaActivity.None) {}
+        runCurrent()
+        assertTrue(host.status.value.running)
+        assertEquals(7001, savedPort)
+        assertEquals("http://127.0.0.1:7001/manifest.json", host.activeHost.manifest)
+        assertEquals(1, created.first().closes)
+        host.releaseOwner(owner)
+        runCurrent()
+        host.start(host.claimOwner(), poster, MediaActivity.None) {}
+        runCurrent()
+        assertEquals(7001, created.last().host.port)
+        assertEquals(3, created.size)
+    }
+
+    @Test fun exhaustedPortRangeStopsCleanlyWithoutPersistingAFailedPort() = runTest {
+        val created = mutableListOf<FakeEngine>()
+        var desired = true
+        var saved = false
+        val host = AndroidRuntimeHost(backgroundScope, coordinator(), { desired }, { desired = it }, {},
+            portSelected = { saved = true }) { config, _, _, _ ->
+            FakeEngine(host = config, occupied = true).also { created += it }
+        }
+        host.start(host.claimOwner(), poster, MediaActivity.None) {}
+        runCurrent()
+        assertEquals(20, created.size)
+        assertTrue(created.all { it.closes == 1 })
+        assertFalse(saved)
+        assertFalse(desired)
+        assertFalse(host.status.value.running)
+        assertTrue(host.status.value.error.isNotBlank())
     }
 }
