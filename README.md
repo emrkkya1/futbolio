@@ -26,6 +26,10 @@ Check that Stremio is installed and Futbolio is running. Use **Copy URL** under 
 http://127.0.0.1:7000/manifest.json
 ```
 
+If port 7000 is occupied (for example by AirPlay), Futbolio tries the next available
+port and remembers it. Use the URL shown in the app. A popup reminds you to remove
+an existing Stremio add-on using the old port and re-add it with the new URL.
+
 This address refers to the Android device itself, not your PC. Opening it on another device will not reach Futbolio on the TV. See **Installation help** in the app for client-specific limitations; web clients may require HTTPS.
 
 ## What appears in Stremio

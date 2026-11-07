@@ -4,6 +4,15 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
+## 0.4.3
+
+### Fixed
+- Automatically try another port when AirPlay or another service occupies the
+  configured port, disposing failed startup attempts and remembering the working
+  port. Installation and copy actions use the actual running endpoint.
+- Warn users when a non-default port is used: existing Stremio installations on
+  port 7000 must be removed and re-added with the new add-on URL.
+
 ## 0.4.2
 
 ### Added

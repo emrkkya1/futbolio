@@ -100,9 +100,13 @@ class DesktopHost(
         var created: EngineControl? = null
         try {
             val settings = _settings.value.validate(platform.addresses())
-            val running = createEngine(settings.host(), configuration.value.config, DesktopPosters())
+            val running = startWithPortFallback(settings.host()) { createEngine(it, configuration.value.config, DesktopPosters()) }
             created = running
-            running.start()
+            if (running.host.port != settings.port) {
+                val updated = settings.copy(port = running.host.port)
+                atomicWrite(directory.resolve("desktop.json"), desktopJson.encodeToString(updated))
+                _settings.value = updated
+            }
             coordinator.attach(ConfigurationTarget { running.configure(it.sources, it.presentation) })
             engine = running
             mutableRuntime.value = RuntimeSnapshot(RuntimePhase.RUNNING, running.providerStatuses.value, running.providerReports.value, running.probeCandidates.value, running.diagnosticSnapshot())

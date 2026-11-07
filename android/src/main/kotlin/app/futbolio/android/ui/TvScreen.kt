@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -75,6 +76,14 @@ internal val tvTheme = darkColorScheme(primary = lime, secondary = lavender, bac
     var savingTimes by remember { mutableStateOf(false) }
     var settingsError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    var portNoticeDismissed by rememberSaveable(state.manifest) { mutableStateOf(false) }
+    if (runtime.running && state.manifest != "http://127.0.0.1:7000/manifest.json" && !portNoticeDismissed) {
+        AppDialog(onDismissRequest = { portNoticeDismissed = true }, title = { Text("Futbolio port changed") }, text = {
+            Text("Port 7000 or the previously selected port was unavailable. Futbolio is now using ${state.manifest}. " +
+                "If you already added Futbolio to Stremio with port 7000 or another old port, remove that add-on and add it again using this new URL.")
+        }, confirmButton = { TvAction("Copy new URL", onClick = actions::copyManifest) },
+            dismissButton = { TvAction("Got it") { portNoticeDismissed = true } })
+    }
     DashboardBackground {
         if (!television) MobileDashboard(state, actions, onToggle = {
             if (runtime.running) actions.stop() else actions.start()

@@ -34,15 +34,16 @@ class AndroidContainer(context: Context) : AndroidSession {
     private val mutableMessage = MutableStateFlow("")
     override val message = mutableMessage.asStateFlow()
     override val descriptors = Configurations.descriptors
-    override val manifest = AppSettings.MANIFEST
+    override val manifest get() = host.activeHost.manifest
     @Volatile private var loadFailed = false
     private val loaded = scope.async {
         try { coordinator.load() }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { loadFailed = true; notify("Saved settings could not be read. Defaults are shown; stored data is unchanged until you save.") }
     }
-    val host = AndroidRuntimeHost(scope, coordinator, settings::desired, { settings.desired(it) }, { loaded.await(); check(!loadFailed) }) { config, poster, activity ->
-        EngineFactory.create(HostConfig(), config, poster, activity)
+    val host = AndroidRuntimeHost(scope, coordinator, settings::desired, { settings.desired(it) }, { loaded.await(); check(!loadFailed) },
+        preferredPort = { settings.port() }, portSelected = { settings.port(it) }) { host, config, poster, activity ->
+        EngineFactory.create(host, config, poster, activity)
     }
     override val runtime = host.status
     override fun notify(message: String) { mutableMessage.value = message }
