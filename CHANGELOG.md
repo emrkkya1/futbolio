@@ -7,6 +7,8 @@ derived from that version using fixed-width numeric positions.
 ## 0.4.5
 
 ### Changed
+- Align the README logo with the apps' solid green diamond-F and bundled Kodchasan
+  wordmark; update Android adaptive/TV icons and enable adaptive launcher resources.
 - Replace the simple favourite/league ladder with weighted interest scoring shared
   by catalogue order and preparation: dominant GS/FB/BJK preferences, competition,
   both clubs' local prominence, major matchups and modest verified live urgency.

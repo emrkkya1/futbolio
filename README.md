@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/futbolio-logo.svg" alt="Futbolio" width="320">
+  <img src="docs/assets/futbolio-logo.svg" alt="Futbolio — diamond F mark and Kodchasan wordmark" width="320">
 </p>
 
 Futbolio is a companion app for Stremio that adds football matches and sports channels from supported third-party providers. It organizes listings into catalogs and passes available streams to Stremio for playback, with a focus on Turkish football. **You watch in Stremio and keep Futbolio running in the background.** Futbolio does not provide broadcasts or play video itself.
