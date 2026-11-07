@@ -2,7 +2,9 @@
 
 ## Required checks
 
-`.github/workflows/check.yml` runs on pushes and pull requests:
+`.github/workflows/check.yml` runs on pull requests and pushes to `main` (not
+feature-branch pushes, which would duplicate PR checks). New commits cancel older
+runs for the same PR; main/release runs are not cancelled:
 
 - **Offline core tests**: `:domain:test :application:test :engine:check`, including
   architecture checks and fixture-backed provider/API/relay integration tests.
@@ -15,7 +17,7 @@
   formatting/detekt are not configured.
 
 Both core jobs run on Linux/JDK 21 and upload reports even on failure.
-Two additional desktop packaging jobs run on every push/PR:
+Two additional desktop packaging jobs run on every main push/PR:
 
 - **Desktop Linux AppImage** (Ubuntu 22.04, JDK 21): run `:desktop:test` under Xvfb
   with software rendering, build a self-contained runtime, wrap it as an AppImage,
