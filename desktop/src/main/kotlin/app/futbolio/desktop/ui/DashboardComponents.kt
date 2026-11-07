@@ -1,8 +1,6 @@
 package app.futbolio.desktop.ui
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,12 +8,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,20 +21,17 @@ import app.futbolio.application.api.*
 import app.futbolio.application.presentation.*
 import app.futbolio.domain.provider.SourceConfig
 
-internal val lime = Color(0xffb4ff62)
-internal val emerald = Color(0xff1ee69b)
-internal val quiet = Color(0xff8b9c92)
-internal val panel = Color(0xff101713)
-internal val edge = Color(0xff24372c)
+// Keep the TV palette and component geometry on desktop, with keyboard/mouse focus.
+internal val lime = Color(0xff3a8638)
+internal val emerald = lime
+internal val lavender = Color(0xffa5a0cb)
+internal val quiet = Color(0xffb5b5b5)
+internal val panel = Color(0xff262626)
+internal val edge = Color(0xff3b3b3b)
+internal val backdrop = Color(0xff1c1c1c)
 
 @Composable internal fun DashboardBackground(content: @Composable BoxScope.() -> Unit) {
-    Box(Modifier.fillMaxSize().background(Color(0xff040705))) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawRect(Brush.radialGradient(listOf(Color(0xff167d40).copy(alpha = .34f), Color.Transparent),
-                center = Offset(size.width * .82f, -size.height * .16f), radius = size.width * .82f))
-        }
-        content()
-    }
+    Box(Modifier.fillMaxSize().background(backdrop), content = content)
 }
 
 @Composable internal fun FutbolioMark(modifier: Modifier = Modifier) {
@@ -51,60 +46,65 @@ internal val edge = Color(0xff24372c)
             lineTo(s * 27 / 42, s * 26 / 42); lineTo(s * 19 / 42, s * 26 / 42)
             lineTo(s * 19 / 42, s * 32 / 42); lineTo(s * 13 / 42, s * 32 / 42); close()
         }
-        drawPath(path, Brush.linearGradient(listOf(lime, emerald)))
+        drawPath(path, lime)
     }
 }
 
-@Composable internal fun RelayHero(runtime: RuntimeSnapshot, scope: String, modifier: Modifier = Modifier, onToggle: () -> Unit) {
-    val running = runtime.running
+@Composable internal fun BrandHeader() {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            FutbolioMark(Modifier.size(62.dp))
+            Text("Futbolio", fontFamily = kodchasan, fontSize = 36.sp, lineHeight = 44.sp, color = lime)
+        }
+        Text("Relay football matches to Stremio", Modifier.padding(start = 80.dp),
+            style = MaterialTheme.typography.bodyMedium, color = quiet)
+    }
+}
+
+@Composable internal fun DesktopAction(text: String, enabled: Boolean = true, modifier: Modifier = Modifier,
+    icon: SolidIcon? = null, onClick: () -> Unit) {
+    Button(onClick, enabled = enabled, shape = pointedButton,
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp), modifier = modifier.heightIn(min = 48.dp)) {
+        if (icon != null) { SolidIcon(icon, Modifier.size(22.dp)); Spacer(Modifier.width(10.dp)) }
+        Text(text, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+@Composable internal fun RelayHero(runtime: RuntimeSnapshot, modifier: Modifier = Modifier, onToggle: () -> Unit) {
     val busy = runtime.phase in listOf(RuntimePhase.STARTING, RuntimePhase.STOPPING)
-    val activation by animateFloatAsState(if (running) 1f else 0f, tween(650), label = "relay-activation")
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-    val compact = maxWidth < 600.dp
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        if (!compact) Column(Modifier.weight(1f).padding(end = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("YOUR MATCH. YOUR SCREEN.", color = emerald, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-            Text(if (running) "Match day.\nMade simple." else "Ready for\nkick-off.", color = Color.White,
-                fontWeight = FontWeight.Bold, fontSize = 38.sp, lineHeight = 42.sp, letterSpacing = (-1).sp)
-            Text("Your football. Straight to Stremio.", color = quiet, fontSize = 14.sp)
+    var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.04f else 1f, label = "relay-focus")
+    val label = if (busy) "${runtime.phase.label}…" else if (runtime.running) "Stop Futbolio" else "Start Futbolio"
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            Button(onClick = onToggle, enabled = !busy,
+                modifier = modifier.testTag("relay-toggle").size(158.dp).scale(scale)
+                    .semantics { contentDescription = label }.onFocusChanged { focused = it.hasFocus }
+                    .border(if (focused) 3.dp else 0.dp, if (focused) lavender else Color.Transparent, relayDiamond),
+                shape = relayDiamond, contentPadding = PaddingValues(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = lime, contentColor = Color.White,
+                    disabledContainerColor = panel, disabledContentColor = quiet)) {
+                if (busy) CircularProgressIndicator(Modifier.size(48.dp), color = lavender, strokeWidth = 3.dp)
+                else SolidIcon(if (runtime.running) SolidIcon.Stop else SolidIcon.Play, Modifier.size(72.dp))
+            }
+            Text(label, style = MaterialTheme.typography.titleLarge, color = Color.White)
         }
-        Column(if (compact) Modifier.fillMaxWidth() else Modifier.width(300.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(13.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) {
-                FutbolioMark(Modifier.size(46.dp))
-                Text("Futbolio", color = Color.White, fontWeight = FontWeight.Black, fontSize = 43.sp, letterSpacing = (-2).sp)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                Canvas(Modifier.size(9.dp)) { drawCircle(if (running) emerald else quiet)
-                    if (activation in .01f.. .99f) drawCircle(emerald.copy(alpha = 1f - activation), radius = size.width * (1f + activation), style = Stroke(2f)) }
-                Text(when (runtime.phase) { RuntimePhase.RUNNING -> "Relay online"; RuntimePhase.STARTING -> "Starting relay…"; RuntimePhase.STOPPING -> "Stopping relay…"; else -> "Relay offline" },
-                    color = if (running) emerald else quiet, fontSize = 14.sp)
-                Text("· $scope", color = quiet, fontSize = 12.sp)
-            }
-            var focused by remember { mutableStateOf(false) }
-            val shape = RoundedCornerShape(17.dp)
-            Button(onClick = onToggle, enabled = !busy, modifier = modifier.testTag("relay-toggle").width(252.dp).height(56.dp)
-                .onFocusChanged { focused = it.hasFocus }.background(Brush.horizontalGradient(listOf(lime, emerald)), shape)
-                .border(if (focused) 2.dp else 0.dp, if (focused) Color.White else Color.Transparent, shape),
-                shape = shape, colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color(0xff05160c), disabledContainerColor = panel, disabledContentColor = quiet)) {
-                if (busy) CircularProgressIndicator(Modifier.size(19.dp), strokeWidth = 2.dp, color = emerald)
-                else RelayGlyph(running)
-                Spacer(Modifier.width(11.dp))
-                Text(if (busy) runtime.phase.label + "…" else if (running) "Stop relay" else "Start relay", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-            if (running) Text("${runtime.diagnostics.activeMedia} active · %.1f MB relayed".format(runtime.diagnostics.mediaBytes / 1048576.0), color = quiet, fontSize = 11.sp)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Canvas(Modifier.size(8.dp)) { drawCircle(if (runtime.running) lime else quiet) }
+            Text(when (runtime.phase) {
+                RuntimePhase.RUNNING -> "Relay is live"
+                RuntimePhase.STARTING -> "Starting relay…"
+                RuntimePhase.STOPPING -> "Stopping relay…"
+                else -> "Relay is stopped"
+            }, style = MaterialTheme.typography.bodyLarge, color = Color.White)
         }
-    }
-}
-
-}
-
-@Composable private fun RelayGlyph(running: Boolean) {
-    Canvas(Modifier.size(20.dp)) {
-        val ink = Color(0xff05160c)
-        if (running) {
-            drawRect(ink, Offset(size.width * .2f, size.height * .15f), androidx.compose.ui.geometry.Size(size.width * .2f, size.height * .7f))
-            drawRect(ink, Offset(size.width * .6f, size.height * .15f), androidx.compose.ui.geometry.Size(size.width * .2f, size.height * .7f))
-        } else drawPath(Path().apply { moveTo(size.width * .25f, size.height * .1f); lineTo(size.width * .9f, size.height * .5f); lineTo(size.width * .25f, size.height * .9f); close() }, ink)
+        val enabled = runtime.providers.filter { it.enabled }
+        Text(when {
+            !runtime.running -> "Start Futbolio to load your sources"
+            enabled.any { it.loading } -> "Loading source catalogs…"
+            enabled.isEmpty() -> "No stream sources enabled"
+            else -> "${enabled.sumOf { it.count }} listings across ${enabled.size} sources"
+        }, color = quiet, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -112,26 +112,35 @@ internal val edge = Color(0xff24372c)
     val health = providerCardState(source, runtime)
     var focused by remember { mutableStateOf(false) }
     val active = runtime.testBatch.activeProviderId == source.id
-    Surface(color = if (focused) Color(0xff19291e) else panel, shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(if (focused) 2.dp else 1.dp, if (focused || active) emerald else edge),
-        modifier = modifier.testTag("provider-${source.id}").onFocusChanged { focused = it.hasFocus }.clickable(onClick = onClick).animateContentSize()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(source.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 22.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            HealthLine("Connected", health.connected)
-            HealthLine("Catalog", health.catalog)
-            HealthLine("Stream Fetching", health.fetching)
-            Text(if (active) "TESTING NOW" else "VIEW DETAILS  ›", color = if (active) emerald else quiet, fontSize = 9.sp, lineHeight = 12.sp, letterSpacing = .7.sp)
+    val shape = RoundedCornerShape(8.dp)
+    Surface(color = if (focused) panel else Color.Transparent, shape = shape,
+        border = BorderStroke(2.dp, if (focused || active) lavender else Color.Transparent),
+        modifier = modifier.testTag("provider-${source.id}").onFocusChanged { focused = it.hasFocus }.clickable(onClick = onClick)) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(source.name, Modifier.weight(1f), color = Color.White, style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                SolidIcon(SolidIcon.Chevron, Modifier.size(20.dp), quiet)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                HealthLine("Connection", health.connected, Modifier.weight(1f))
+                HealthLine("Catalog", health.catalog, Modifier.weight(1f))
+                HealthLine("Stream fetch", health.fetching, Modifier.weight(1f))
+            }
         }
     }
 }
 
-@Composable private fun HealthLine(label: String, value: HealthValue) {
-    val color = when (value.tone) { HealthTone.GOOD -> emerald; HealthTone.WARNING -> Color(0xffe9c875); HealthTone.BAD -> Color(0xffff8e91); HealthTone.CHECKING -> lime; else -> quiet }
-    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Text(label, color = quiet, fontSize = 11.sp, lineHeight = 14.sp)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Canvas(Modifier.size(5.dp)) { drawCircle(color) }
-            Text(value.text, color = color, fontSize = 13.sp, lineHeight = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+@Composable private fun HealthLine(label: String, value: HealthValue, modifier: Modifier = Modifier) {
+    val color = when (value.tone) {
+        HealthTone.GOOD -> Color(0xff80c77d)
+        HealthTone.WARNING -> Color(0xffe9c875)
+        HealthTone.BAD -> Color(0xffff9999)
+        HealthTone.CHECKING -> lavender
+        else -> quiet
+    }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, color = quiet, fontSize = 11.sp, lineHeight = 15.sp)
+        Text(value.text, color = color, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

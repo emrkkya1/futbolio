@@ -16,7 +16,7 @@ If step 2 fails: verify the selected interface, private-network firewall rule, V
 ## Android TV → Stremio on the same TV (about 5 minutes initially)
 
 1. Install the APK, open Futbolio, start it, and try Install / open Stremio. If no add-on is installed, record the Stremio version and available install options.
-2. Confirm this is the **Futbolio TV** add-on, not Desktop or a legacy add-on. Its URL is exactly `http://127.0.0.1:7000/manifest.json`.
+2. Confirm this is the **Futbolio TV** add-on, not Desktop or a legacy add-on. Its URL defaults to `http://127.0.0.1:7000/manifest.json`; if that port is occupied, use the actual URL shown in Futbolio and re-add any Stremio installation using the old port.
 3. Confirm catalogs, search, poster/metadata, stream choices and one actual video/audio playback.
 4. Close Futbolio's activity, reopen Stremio, and confirm playback continues. A foreground notification should remain where supported.
 5. Reopen Futbolio: bytes should have advanced; Stop should close the service, and Start should restore it.

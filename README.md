@@ -58,7 +58,24 @@ Playback depends on the source, Stremio, and your device's codec support. Full-m
 
 ## Desktop
 
-**Windows and Linux applications are on the roadmap.** Desktop installers are not currently published in releases, but a desktop app can already be built from source. It can serve Stremio on the same computer or trusted devices on a private network. Never expose its port publicly or share its token-bearing URL outside that network.
+Download the **Linux x86_64 AppImage** or **Windows x86_64 `.exe` installer** from
+[Releases](https://github.com/emrkkya1/futbolio/releases/latest). Both bundle Java;
+no separate Java installation is needed. Desktop uses the same dashboard design as
+Android TV, with mouse/keyboard controls and a system tray where supported.
+
+- **Linux:** make the AppImage executable (`chmod +x futbolio-v*.AppImage`) and open
+  it. If FUSE is unavailable, use `APPIMAGE_EXTRACT_AND_RUN=1 ./futbolio-v*.AppImage`.
+- **Windows:** run the `.exe` installer for your user account. Installers are
+  currently unsigned, so Windows may show a SmartScreen warning. Verify the
+  published SHA-256 checksum and download only from this repository's releases.
+- Start Futbolio, then choose **How to Install** to add it to Stremio. Closing the
+  window hides it to the tray where supported; choose **Quit** to stop it entirely.
+
+The desktop host can serve Stremio on the same computer or trusted devices on a
+private network. Configure this under **Settings → Network settings** while the
+relay is stopped. Never expose its port publicly or share its token-bearing URL
+outside that network. AppImage support targets glibc-based Linux distributions;
+ARM, macOS, and automatic desktop updates are not part of this release.
 
 [Changelog](CHANGELOG.md) · [Score enrichment](docs/SCORE-ENRICHMENT.md)
 
