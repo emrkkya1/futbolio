@@ -29,6 +29,7 @@ data class StreamChoice(
     val title: String, val url: String = "", val headers: SourceHeaders = SourceHeaders(),
     val externalUrl: String = "", val providers: List<String> = emptyList(), val mediaType: String = "",
     val session: PlaybackSession? = null,
+    val assessment: StreamAssessment = StreamAssessment(),
 ) {
     override fun toString() = "StreamChoice(inline=${url.isNotEmpty()}, external=${externalUrl.isNotEmpty()}, credentials=[redacted])"
 }

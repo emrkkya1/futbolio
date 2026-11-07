@@ -11,11 +11,13 @@ data class Document(val url: String, val text: String) {
 
 class UpstreamResponse(
     val status: Int, val url: String, val headers: Map<String, String>, val body: InputStream,
+    private val cancelRequest: (() -> Unit)? = null,
     private val dispose: () -> Unit = { body.close() },
 ) : Closeable {
     private val closed = java.util.concurrent.atomic.AtomicBoolean()
     fun header(name: String) = headers[name.lowercase()].orEmpty()
     override fun close() { if (closed.compareAndSet(false, true)) dispose() }
+    fun abort() { if (cancelRequest != null) cancelRequest.invoke() else close() }
 }
 
 /** Validated transport supplied by composition; no vendor HTTP types cross this port. */
@@ -35,11 +37,11 @@ interface Upstream : Closeable {
 /** Cancellation closes the leased body even while a blocking stream read is in progress. */
 suspend inline fun <T> UpstreamResponse.useResponse(block: (UpstreamResponse) -> T): T {
     val lease = Job(currentCoroutineContext()[Job])
-    lease.invokeOnCompletion { close() }
+    lease.invokeOnCompletion { cause -> if (cause != null) abort() else close() }
     try {
         currentCoroutineContext().ensureActive()
         return block(this)
-    } finally { lease.complete() }
+    } finally { lease.complete(); close() }
 }
 
 suspend fun readLimited(input: InputStream, limit: Int, dispatcher: CoroutineDispatcher = Dispatchers.IO): ByteArray = withContext(dispatcher) {

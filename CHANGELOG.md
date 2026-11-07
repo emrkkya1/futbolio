@@ -4,6 +4,28 @@ The version applies to Futbolio as a whole: shared engine, Stremio manifest,
 desktop application and Android application. Android's integer version code is
 derived from that version using fixed-width numeric positions.
 
+## 0.4.2
+
+### Added
+- Bounded HLS connection measurements with GOOD, MEDIUM, and SLOW grades,
+  resolution detection from H.264 segment headers, and bitrate/frame-rate metadata.
+- Predictive preparation of up to four likely Live Now matches, prioritizing
+  major Turkish teams and competitions, with at most three measured providers per
+  match. Preparation runs independently of serialized bandwidth checks and pauses
+  during playback.
+
+### Changed
+- Sort match catalogues by the same descending interest scores used for predictive
+  prefetch, before pagination; equal scores retain live-first and kickoff ordering.
+- Compact Stremio stream entries: provider and connection grade in the name;
+  resolution, frame rate, and bitrate on one title line with measurement age below.
+  Unmeasured and failed checks stay unrated; playable alternatives remain listed.
+
+### Fixed
+- Interpret FutbolVivo's default schedule in Eastern time, migrate its old bundled
+  UTC default, and reconcile observed match aliases without losing providers.
+- Correct partial-transfer timing estimates and a response-close cancellation race.
+
 ## 0.4.1
 
 ### Changed

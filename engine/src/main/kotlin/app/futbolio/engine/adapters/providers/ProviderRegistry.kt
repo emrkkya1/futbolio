@@ -37,7 +37,8 @@ internal class ProviderRegistry(registrations: List<ProviderRegistration> = bund
             ProviderRegistration(ProviderDescriptor(SourceConfig("papaz", "papaz", "PapazSports", "https://bit.ly/m/papazsports", dataUrl = "https://gr0k.app/script2.js",
                 fallbackUrls = listOf("https://linktr.ee/papazsports", "https://bit.ly/3QeeImt")), setOf(ProviderSetting.DATA_URL))) { PapazProvider },
             ProviderRegistration(ProviderDescriptor(SourceConfig("taraftarium", "taraftarium", "Taraftarium24", "https://taraftarium24.io/"), setOf(ProviderSetting.API_URL))) { TaraftariumProvider },
-            ProviderRegistration(ProviderDescriptor(SourceConfig("futbolvivo", "futbolvivo", "FutbolVivo", "https://futbolvivo.online/", timeZone = "UTC"), setOf(ProviderSetting.API_URL))) { FutbolVivoProvider },
+            // The agenda's date/time fields are US Eastern wall time, not UTC (including DST).
+            ProviderRegistration(ProviderDescriptor(SourceConfig("futbolvivo", "futbolvivo", "FutbolVivo", "https://futbolvivo.online/", timeZone = "America/New_York"), setOf(ProviderSetting.API_URL))) { FutbolVivoProvider },
             ProviderRegistration(ProviderDescriptor(SourceConfig("720pstream", "720pstream", "720pstream", "https://720pstream.cx/soccer-online", timeZone = "UTC"))) { Stream720Provider },
         )
         val kinds get() = bundled.map { it.source.kind }

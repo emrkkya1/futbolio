@@ -12,13 +12,22 @@ class FutbolVivoProviderTest {
 
     @Test fun utcFixturePreservesPlayerLanguage() {
         val json = requireNotNull(javaClass.getResource("/providers/futbolvivo/agenda.json")).readText()
-        val row = FutbolVivoProvider.parse(source, Json.parseToJsonElement(json).jsonObject).single()
+        val row = FutbolVivoProvider.parse(source.copy(timeZone = "UTC"), Json.parseToJsonElement(json).jsonObject).single()
         assertEquals(1893456000000, row.starts)
         assertEquals("English", row.players.single().language)
     }
 
     @Test fun malformedCatalogIsNotSilentlySuccessfulDiscovery() {
         assertFailsWith<IllegalArgumentException> { FutbolVivoProvider.parse(source, Json.parseToJsonElement("{}").jsonObject) }
+    }
+
+    @Test fun easternScheduleUsesDaylightSavingRulesAndPreservesCustomTimezoneOverrides() {
+        for ((date, utc) in listOf("2026-07-07" to "2026-07-07T15:00:00Z", "2026-11-07" to "2026-11-07T16:00:00Z")) {
+            val payload = Json.parseToJsonElement("""{"events":[{"sport":"futbol","title":"Süper Lig: Galatasaray vs Amed","date":"$date","time":"11:00:00"}]}""").jsonObject
+            assertEquals(java.time.Instant.parse(utc).toEpochMilli(), FutbolVivoProvider.parse(source, payload).single().starts)
+            assertEquals(java.time.Instant.parse("${date}T11:00:00Z").toEpochMilli(),
+                FutbolVivoProvider.parse(source.copy(timeZone = "UTC"), payload).single().starts)
+        }
     }
 
     @Test fun redirectedHomeIsUsedForBrowserLinksAndPlayerReferers() = runBlocking {

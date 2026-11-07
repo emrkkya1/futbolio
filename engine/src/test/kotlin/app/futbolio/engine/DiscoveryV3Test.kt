@@ -45,10 +45,10 @@ class DiscoveryV3Test {
         val listing = row(start = 0).copy(source = s.copy(timeZone = "Europe/Istanbul"), timeLabel = "22:00")
         assertEquals(now, MatchNormalizer.kickoff(listing, now))
     }
-    @Test fun futbolVivoUsesUtcAndPreservesOptions() {
+    @Test fun futbolVivoUsesEasternTimeAndPreservesOptions() {
         val payload = codec.parseToJsonElement("""{"events":[{"date":"2026-11-01","time":"19:00:00","title":"LaLiga: Athletic Club vs Real Sociedad","sport":"futbol","embeds":[{"name":"ESPN","lang":"Español","iframe":"https://player.example/live"}]},{"title":"NBA","sport":"basket","embeds":[]}]}""").obj()
         val rows = FutbolVivoProvider.parse(Configurations.sources().first { it.kind == "futbolvivo" }, payload)
-        assertEquals(1, rows.size); assertEquals(now, rows[0].starts); assertEquals("LaLiga", rows[0].league); assertEquals("Athletic Club vs Real Sociedad", rows[0].title); assertEquals("Español", rows[0].players.single().language)
+        assertEquals(1, rows.size); assertEquals(now + 5 * 3_600_000, rows[0].starts); assertEquals("LaLiga", rows[0].league); assertEquals("Athletic Club vs Real Sociedad", rows[0].title); assertEquals("Español", rows[0].players.single().language)
     }
     @Test fun domainCandidatesAreBoundedAndOptIn() {
         val recovery = DomainRecovery(FixtureUpstream(), ProviderRegistry()); val source = SourceConfig("test", "papaz", "Test", "https://papaz100.example/")

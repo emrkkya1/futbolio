@@ -77,10 +77,11 @@ class CatalogCurationTest {
         assertTrue(visible(entry.copy(fixture = fixture(entry.league, now, MatchState.HALFTIME))))
     }
 
-    @Test fun liveMatchesSortAheadOfUpcomingThenByKickoff() {
+    @Test fun higherPriorityUpcomingMatchSortsAheadOfLowerPriorityLiveMatch() {
         val rows = listOf(row("future", start = now + hour), row("live", title = "Arsenal vs Chelsea", start = now - hour))
         val entries = MatchNormalizer.aggregate(rows, emptyList(), options, now)
-        assertEquals("Arsenal vs Chelsea", CatalogSelection.select(entries, CatalogQuery("football"), now).first().title)
+        assertEquals(entries.single { it.starts == now + hour }.id,
+            CatalogSelection.select(entries, CatalogQuery("football"), now).first().id)
     }
 
     @Test fun galatasarayStuttgartConflictingTimesProduceOneEntryWithEveryStream() {
@@ -103,6 +104,28 @@ class CatalogCurationTest {
         val entry = aggregate(row(title = "Galatasaray SK vs Stuttgart"), row("b", "Galatasaray vs VfB Stuttgart", start = now + 30 * 60_000)).single()
         assertEquals(2, entry.listings.size)
         assertFalse(entry.needsFixtureLookup)
+    }
+
+    @Test fun providerConsensusBeatsOneIncorrectExplicitTimestampAndDuplicatePlayerRowsDoNotVote() {
+        val at = Instant.parse("2026-11-07T16:30:00Z").toEpochMilli()
+        val correct = Instant.parse("2026-11-07T16:00:00Z").toEpochMilli()
+        val wrong = Instant.parse("2026-11-07T11:00:00Z").toEpochMilli()
+        fun clock(id: String) = row(id, "Galatasaray vs Amed", "Süper Lig", 0).copy(timeLabel = "19:00", observedAt = at)
+        val rows = listOf(clock("papaz"), clock("taraftarium"),
+            row("futbolvivo", "Galatasaray vs Amed", "Süper Lig", wrong))
+        val merged = MatchNormalizer.aggregate(rows, emptyList(), options.copy(hideFinished = false), at).single()
+        assertEquals(correct, merged.starts)
+        assertTrue(merged.needsFixtureLookup)
+        val duplicated = rows + (1..5).map { rows.last().copy(page = "https://fixture.example/alternate-$it") }
+        assertEquals(correct, MatchNormalizer.aggregate(duplicated, emptyList(), options.copy(hideFinished = false), at).single().starts)
+    }
+
+    @Test fun reverseHomeAwayOrderWithSlightlyDifferentKickoffsMergesWithoutBroadFuzzyMatching() {
+        val merged = aggregate(row(title = "Arsenal vs Chelsea", league = "Premier League"),
+            row("b", "Chelsea vs Arsenal", "Premier League", now + 15 * 60_000)).single()
+        assertEquals(2, merged.listings.size)
+        assertEquals(2, aggregate(row(title = "Sporting CP vs Moreirense"), row("b", "Sporting Braga vs Moreirense", start = now + hour)).size)
+        assertEquals(2, aggregate(row(title = "Amed vs Galatasaray"), row("b", "Amed U19 vs Galatasaray U19")).size)
     }
 
     @Test fun distinctSquadsAndDifferentDatesRemainSeparate() {
