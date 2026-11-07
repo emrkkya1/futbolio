@@ -3,7 +3,7 @@ package app.futbolio.desktop.ui
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,8 +21,9 @@ import app.futbolio.domain.provider.SourceConfig
 import app.futbolio.domain.settings.PresentationConfig
 import kotlinx.coroutines.launch
 
-internal val theme = darkColorScheme(primary = Color(0xffb4ff62), secondary = Color(0xff1ee69b), background = Color(0xff040705),
-    surface = Color(0xff101713), surfaceVariant = Color(0xff18241c), onPrimary = Color(0xff05160c), onSurface = Color(0xfff1f8f3), outline = Color(0xff355441))
+internal val theme = darkColorScheme(primary = lime, secondary = lavender, background = backdrop,
+    surface = panel, surfaceVariant = Color(0xff303030), onPrimary = Color.White,
+    onBackground = Color.White, onSurface = Color.White, outline = edge)
 
 /** Passive platform layout: immutable values and actions only, no engine, store or network access. */
 @Composable internal fun DesktopScreen(state: DesktopUiState, actions: DesktopActions) {
@@ -34,6 +35,10 @@ internal val theme = darkColorScheme(primary = Color(0xffb4ff62), secondary = Co
     var testing by remember { mutableStateOf<SourceConfig?>(null) }
     var preferences by remember { mutableStateOf(false) }
     var defaults by remember { mutableStateOf(false) }
+    var settings by remember { mutableStateOf(false) }
+    var help by remember { mutableStateOf(false) }
+    var savingTimes by remember { mutableStateOf(false) }
+    var settingsError by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var portNoticeDismissed by remember(state.settings.port) { mutableStateOf(false) }
     if (running && state.settings.port != 7000 && !portNoticeDismissed) {
@@ -43,54 +48,83 @@ internal val theme = darkColorScheme(primary = Color(0xffb4ff62), secondary = Co
             dismissButton = { TextButton(onClick = { portNoticeDismissed = true }) { Text("Got it") } })
     }
     DashboardBackground {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        RelayHero(state.runtime, if (state.settings.lanAddress.isBlank()) "this computer" else "private LAN") {
-            if (running) actions.onStop() else actions.onStart()
-        }
-        if (state.error.isNotBlank()) Text(state.error, color = MaterialTheme.colorScheme.error)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column {
-                Text("Your providers", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 21.sp)
-                Text("One connection. Every match.", color = quiet, fontSize = 12.sp)
-            }
-            val batch = state.runtime.testBatch
-            OutlinedButton(onClick = actions::onTestAll, enabled = running && !state.runtime.providerTestsBusy() && config.sources.any { it.enabled }, modifier = Modifier.testTag("test-all-providers")) {
-                if (batch.running) { CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)) }
-                Text(if (batch.running) "Testing ${minOf(batch.completed + 1, batch.total)} / ${batch.total}" else "Test all providers")
-            }
-        }
-        if (config.sources.isEmpty()) Text("Add a provider below to get started.", color = quiet)
-        else BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val tileWidth = ((maxWidth - 6.dp - 12.dp * (config.sources.size - 1)) / config.sources.size).coerceIn(174.dp, 240.dp)
-            LazyRow(Modifier.fillMaxWidth().height(240.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(3.dp)) {
-                items(config.sources, key = { it.id }) { source -> ProviderTile(source, state.runtime, Modifier.width(tileWidth)) { testing = source } }
-            }
-        }
-        Text("Stream Fetching is true when real media is fetched. Select a provider for test details.", color = quiet, fontSize = 11.sp)
-        Surface(Modifier.fillMaxWidth(), color = panel, shape = RoundedCornerShape(20.dp)) {
-                Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("Connect Stremio", style = MaterialTheme.typography.titleLarge)
-                Text("Set up once. Keep Futbolio running when you watch.", color = quiet)
-                Selectable(state.manifest)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(enabled = running, onClick = actions::onInstall) { Text("Install in Stremio") }
-                    OutlinedButton(onClick = actions::onCopyManifest) { Text("Copy manifest URL") }
-                    OutlinedButton(enabled = running, onClick = actions::onInstallPage) { Text("Installation page") }
+        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 28.dp)) {
+            val controls: @Composable (Modifier) -> Unit = { modifier ->
+                Column(modifier, verticalArrangement = Arrangement.spacedBy(22.dp)) {
+                    BrandHeader()
+                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(6.dp),
+                        verticalArrangement = Arrangement.Center) {
+                        RelayHero(state.runtime) { if (running) actions.onStop() else actions.onStart() }
+                        if (state.error.isNotBlank()) Text(state.error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DesktopAction("How to Install", icon = SolidIcon.Help) { help = true }
+                        DesktopAction("Settings", icon = SolidIcon.Settings) { settings = true }
+                    }
                 }
-                Text(if (state.settings.lanAddress.isBlank())
-                    "Localhost mode uses the same token-free URL as the mobile app. Keep Futbolio running during playback."
-                    else "This LAN URL includes a private access token. Share it only with trusted devices. Keep this computer awake during playback.")
-                Text("For another device, choose a private LAN address under Network. Never expose the relay publicly.", color = quiet, fontSize = 12.sp)
-             } }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { tab = 1 }) { Text("Provider settings") }
-            OutlinedButton(onClick = { preferences = true }) { Text("Match settings") }
-            OutlinedButton(onClick = { tab = 2; actions.onRefreshNetwork() }) { Text("Network settings") }
-            OutlinedButton(onClick = { tab = 3 }) { Text("Diagnostics") }
+            }
+            val sources: @Composable (Modifier) -> Unit = { modifier ->
+                Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Stream sources", style = MaterialTheme.typography.titleLarge)
+                    if (config.sources.isEmpty()) Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                        Text("No stream sources configured.", color = quiet)
+                    } else Box(Modifier.weight(1f).fillMaxWidth()) {
+                        val scroll = androidx.compose.foundation.lazy.rememberLazyListState()
+                        LazyColumn(Modifier.fillMaxSize().padding(end = 10.dp), state = scroll, contentPadding = PaddingValues(4.dp)) {
+                            items(config.sources, key = { it.id }) { source ->
+                                ProviderTile(source, state.runtime, Modifier.fillMaxWidth()) { testing = source }
+                                HorizontalDivider(Modifier.padding(horizontal = 12.dp), color = edge)
+                            }
+                        }
+                        VerticalScrollbar(rememberScrollbarAdapter(scroll), Modifier.align(Alignment.CenterEnd).fillMaxHeight())
+                    }
+                    val batch = state.runtime.testBatch
+                    DesktopAction(if (batch.running) "Testing ${minOf(batch.completed + 1, batch.total)} / ${batch.total}" else "Test Providers",
+                        running && !state.runtime.providerTestsBusy() && config.sources.any { it.enabled },
+                        Modifier.fillMaxWidth().testTag("test-all-providers"), icon = SolidIcon.Whistle, onClick = actions::onTestAll)
+                }
+            }
+            if (maxWidth >= 760.dp) Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                controls(Modifier.weight(1.45f).fillMaxHeight())
+                VerticalDivider(color = edge)
+                sources(Modifier.weight(1f).fillMaxHeight())
+            } else Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                controls(Modifier.fillMaxWidth().height(490.dp))
+                HorizontalDivider(color = edge)
+                sources(Modifier.fillMaxWidth().height(560.dp))
+            }
         }
-        Text("Private by design. No analytics, no video files on disk. Use only streams you are authorized to access.", color = quiet, fontSize = 11.sp)
     }
-    }
+    if (help) AlertDialog(onDismissRequest = { help = false }, title = { Text("How to Install") }, text = {
+        Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text("1. Start Futbolio and keep it running while you watch.")
+            Text("2. Open Stremio on this computer and install the add-on using the URL below.")
+            Selectable(state.manifest)
+            DesktopAction("Copy URL", modifier = Modifier.fillMaxWidth(), onClick = actions::onCopyManifest)
+            DesktopAction("Install in Stremio", enabled = running, modifier = Modifier.fillMaxWidth(), onClick = actions::onInstall)
+            Text(if (state.settings.lanAddress.isBlank()) "This URL works only on this computer. For another device, select a private LAN address in Network settings."
+                else "This URL contains a private access token. Share it only with trusted devices on your LAN; never expose this port publicly.", color = quiet)
+        }
+    }, confirmButton = { DesktopAction("Close", icon = SolidIcon.Close) { help = false } })
+    if (settings) AlertDialog(onDismissRequest = { settings = false }, title = { Text("Settings") }, text = {
+        Column(Modifier.heightIn(max = 430.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            DesktopAction("Diagnostics") { settings = false; tab = 3 }
+            DesktopAction("Provider settings") { settings = false; tab = 1 }
+            DesktopAction("Network settings") { settings = false; tab = 2; actions.onRefreshNetwork() }
+            DesktopAction("Match settings") { settings = false; preferences = true }
+            Text("Times and Scores", style = MaterialTheme.typography.titleSmall)
+            PointedOnOffSwitch(config.presentation.showTimesAndScores, enabled = !savingTimes) { enabled ->
+                    scope.launch {
+                        savingTimes = true
+                        try {
+                            val result = actions.savePresentation(config.presentation.copy(showTimesAndScores = enabled))
+                            settingsError = result.error
+                        } finally { savingTimes = false }
+                    }
+            }
+            if (settingsError.isNotBlank()) Text(settingsError, color = MaterialTheme.colorScheme.error)
+        }
+    }, confirmButton = { DesktopAction("Close", icon = SolidIcon.Close) { settings = false } })
     if (tab != 0) AlertDialog(onDismissRequest = { tab = 0 }, containerColor = panel,
         title = { Text(when (tab) { 1 -> "Provider settings"; 2 -> "Network settings"; else -> "Diagnostics" }) },
         text = {
@@ -209,26 +243,26 @@ internal val theme = darkColorScheme(primary = Color(0xffb4ff62), secondary = Co
 }
 
 @Composable private fun WorkbenchDialog(source: SourceConfig, runtime: RuntimeSnapshot, actions: DesktopActions, dismiss: () -> Unit) {
-    val report = runtime.reports[source.id]
-    var query by remember { mutableStateOf("") }
+    val health = app.futbolio.application.presentation.providerCardState(source, runtime)
+    val connected = health.connected.tone == app.futbolio.application.presentation.HealthTone.GOOD
+    val status = runtime.providers.firstOrNull { it.id == source.id }
+    val count = status?.takeIf { it.ok || it.count > 0 }?.count
+        ?: runtime.reports[source.id]?.catalogCount?.takeIf { it > 0 }
+    val fetching = health.fetching.tone == app.futbolio.application.presentation.HealthTone.GOOD
     AlertDialog(onDismissRequest = dismiss, containerColor = panel, title = { Text(source.name) }, text = {
-        Column(Modifier.width(600.dp).heightIn(max = 500.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("PROVIDER OVERVIEW", color = emerald, fontSize = 11.sp)
-            OutlinedButton(onClick = { actions.onTest(source.id) }, enabled = source.enabled && runtime.running && !runtime.providerTestsBusy()) { Text("Test This Provider") }
-            app.futbolio.application.presentation.providerDetails(source, runtime).forEach { (label, value) ->
-                Surface(color = Color(0xff18241c), shape = MaterialTheme.shapes.medium) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text(label, color = emerald, style = MaterialTheme.typography.labelMedium)
-                        androidx.compose.foundation.text.selection.SelectionContainer { Text(value, color = Color.White, style = MaterialTheme.typography.bodySmall) }
-                    }
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            listOf("Available" to if (connected) "Yes" else "No",
+                "Catalog" to (count?.let { "$it Events" } ?: health.catalog.text),
+                "Live Streams" to if (fetching) "Working" else health.fetching.text).forEach { (label, value) ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(label, Modifier.weight(1f), color = lavender, style = MaterialTheme.typography.titleSmall)
+                    Text(value, style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            OutlinedTextField(query, { query = it }, label = { Text("Find another match/channel to test") }, singleLine = true)
-            if (query.isNotBlank()) runtime.candidates[source.id].orEmpty().filter { it.title.contains(query, true) }.take(5).forEach { candidate ->
-                TextButton(onClick = { actions.onTest(source.id, candidate.id); query = "" }) { Text("Test ${candidate.title}") }
-            }
         }
-    }, confirmButton = { TextButton(onClick = { actions.onCopyReport(source.id) }) { Text("Copy report") } }, dismissButton = { TextButton(onClick = dismiss) { Text("Close") } })
+    }, confirmButton = { DesktopAction("Close", icon = SolidIcon.Close, onClick = dismiss) }, dismissButton = {
+        DesktopAction("Test Provider", source.enabled && runtime.running && !runtime.providerTestsBusy(), icon = SolidIcon.Whistle) { actions.onTest(source.id) }
+    })
 }
 
 @Composable private fun MatchPreferences(options: PresentationConfig, dismiss: () -> Unit, save: suspend (PresentationConfig) -> SaveResult) {

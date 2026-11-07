@@ -15,6 +15,7 @@ import androidx.compose.ui.window.*
 import app.futbolio.desktop.cli.runCommandLine
 import app.futbolio.desktop.ui.DesktopScreen
 import app.futbolio.desktop.ui.theme
+import app.futbolio.desktop.ui.futbolioTypography
 import kotlinx.coroutines.*
 import java.awt.SystemTray
 import java.nio.file.Path
@@ -43,7 +44,7 @@ fun main(args: Array<String>) {
                     lineTo(s * 19 / 42, s * 16 / 42); lineTo(s * 19 / 42, s * 20 / 42); lineTo(s * 27 / 42, s * 20 / 42)
                     lineTo(s * 27 / 42, s * 26 / 42); lineTo(s * 19 / 42, s * 26 / 42); lineTo(s * 19 / 42, s * 32 / 42)
                     lineTo(s * 13 / 42, s * 32 / 42); close()
-                }, Color(0xffb4ff62))
+                }, Color(0xff3a8638))
             }
         } }
         if (tray) Tray(appIcon, tooltip = "Futbolio", onAction = { visible = true }) {
@@ -52,9 +53,10 @@ fun main(args: Array<String>) {
             Item("Stop", onClick = host::onStop)
             Separator(); Item("Quit", onClick = quit)
         }
-        Window(onCloseRequest = { if (tray) visible = false else quit() }, visible = visible, title = "Futbolio", icon = appIcon, state = rememberWindowState(width = 1120.dp, height = 860.dp)) {
+        Window(onCloseRequest = { if (tray) visible = false else quit() }, visible = visible, title = "Futbolio", icon = appIcon, state = rememberWindowState(width = 1280.dp, height = 800.dp)) {
+            LaunchedEffect(Unit) { window.minimumSize = java.awt.Dimension(640, 540) }
             val state by host.ui.collectAsState()
-            MaterialTheme(colorScheme = theme) { Surface(Modifier.fillMaxSize()) { DesktopScreen(state, host) } }
+            MaterialTheme(colorScheme = theme, typography = futbolioTypography) { Surface(Modifier.fillMaxSize()) { DesktopScreen(state, host) } }
         }
         DisposableEffect(Unit) { onDispose { host.requestClose() } }
     }
