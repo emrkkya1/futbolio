@@ -94,8 +94,8 @@ internal val backdrop = Color(0xff1c1c1c)
                 .onFocusChanged { focused = it.hasFocus }
                 .border(if (focused) 3.dp else 0.dp, if (focused) Color.White else Color.Transparent, relayDiamond),
             shape = relayDiamond, contentPadding = PaddingValues(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if (preparing) Color.Transparent else lime, contentColor = if (preparing) backdrop else Color.White,
-                disabledContainerColor = if (preparing) Color.Transparent else panel, disabledContentColor = quiet)) {
+            colors = ButtonDefaults.buttonColors(containerColor = if (preparing) Color.Transparent else lime, contentColor = if (preparing) lavender else Color.White,
+                disabledContainerColor = if (preparing) Color.Transparent else panel, disabledContentColor = if (preparing) lavender else quiet)) {
             if (busy && !preparing) CircularProgressIndicator(Modifier.size(if (centered) 36.dp else 48.dp), color = lavender, strokeWidth = 3.dp)
             else SolidIcon(if (runtime.running) SolidIcon.Stop else SolidIcon.Play, Modifier.size(if (centered) 54.dp else 72.dp))
         }
